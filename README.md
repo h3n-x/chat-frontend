@@ -1,3 +1,5 @@
+<div align="center">
+
 # 🎨 Chat Anónimo - Frontend
 
 <div align="center">
