@@ -9,7 +9,7 @@
 
 **Interfaz moderna y responsive para chat anónimo seguro**
 
-[🏠 Proyecto Principal](../README.md) | [🚀 Backend](../backend/README.md) | [🌐 Demo](https://write-ghost.netlify.app) | [📖 English](../README.en.md)
+[🏠 Proyecto Principal](../README.md) | [🚀 Backend](../backend/README.md) | [🌐 Demo](https://write-ghost.netlify.app)
 
 </div>
 

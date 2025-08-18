@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Send, Users, Settings, Sparkles, MessageCircle } from "lucide-react"
+import { Send, Users, Settings, Sparkles, MessageCircle, Paperclip } from "lucide-react"
 import ChatMessage from "./chat-message"
 import UserList from "./user-list"
 import ConnectionStatus from "./connection-status"
 import { RoomManager } from "./room-manager"
 import { TypingIndicator } from "./typing-indicator"
 import { ThemeToggle } from "./theme-toggle"
+import { FileUpload } from "./file-upload"
 
 
 /**
@@ -39,6 +40,7 @@ export default function ChatInterface() {
   // Estado local para el input del mensaje y la visibilidad de la lista de usuarios (mobile)
   const [currentMessage, setCurrentMessage] = useState("")
   const [showUserList, setShowUserList] = useState(false)
+  const [showFileUpload, setShowFileUpload] = useState(false)
   
   // Estado para auto-eliminación de mensajes
   const messageTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
@@ -66,6 +68,9 @@ export default function ChatInterface() {
     createRoom,
     joinRoom,
     leaveRoom,
+    uploadFile,
+    deleteFile,
+    getFileUrl,
     cryptoSupported,
     roomKey: isCryptoActive,
   } = useChatApi()
@@ -96,6 +101,40 @@ export default function ChatInterface() {
     if (!currentMessage.trim()) return
     sendMessage(currentMessage)
     setCurrentMessage("")
+  }
+
+  // Manejar archivos
+  const handleFileUpload = async (file: File) => {
+    try {
+      await uploadFile(file, currentRoom || undefined)
+      setShowFileUpload(false)
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      // Aquí podrías mostrar un toast de error
+    }
+  }
+
+  const handleFileDownload = (fileId: string, filename: string) => {
+    const url = getFileUrl(fileId)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleFilePreview = (fileId: string, mimeType: string) => {
+    const url = getFileUrl(fileId)
+    window.open(url, '_blank')
+  }
+
+  const handleFileDelete = async (fileId: string) => {
+    try {
+      await deleteFile(fileId)
+    } catch (error) {
+      console.error('Error deleting file:', error)
+    }
   }
 
   // Enter para enviar
@@ -273,7 +312,6 @@ export default function ChatInterface() {
                 </div>
                 <div>
                   <h1 className="font-bold text-xl font-sans text-sidebar-foreground">Chat Anónimo</h1>
-                  <p className="text-sm text-muted-foreground">Glassmorphism UI</p>
                 </div>
               </div>
               <ThemeToggle />
@@ -382,6 +420,10 @@ export default function ChatInterface() {
               message={message}
               onReact={handleReaction}
               isOwnMessage={message.user_id === currentUser?.id}
+              getFileUrl={getFileUrl}
+              onFileDownload={handleFileDownload}
+              onFilePreview={handleFilePreview}
+              onFileDelete={handleFileDelete}
             />
           ))}
           {typingUsers.length > 0 && <TypingIndicator typingUsers={typingUsers} />}
@@ -407,6 +449,18 @@ export default function ChatInterface() {
                 className="glass bg-input/80 border-border/50 focus:border-accent/50 focus:ring-accent/30 rounded-xl"
               />
             </div>
+            
+            {/* Botón de archivos */}
+            <Button
+              onClick={() => setShowFileUpload(!showFileUpload)}
+              disabled={!isConnected}
+              variant="outline"
+              className="glass border-border/50 hover:bg-accent/20 rounded-xl px-4"
+              title="Subir archivo"
+            >
+              <Paperclip className="w-4 h-4" />
+            </Button>
+            
             <Button
               onClick={handleSendMessage}
               disabled={!currentMessage.trim()}
@@ -415,6 +469,18 @@ export default function ChatInterface() {
               <Send className="w-4 h-4" />
             </Button>
           </div>
+
+          {/* File Upload Component */}
+          {showFileUpload && (
+            <div className="mt-4">
+              <FileUpload
+                onFileSelect={() => {}} // Solo para preview
+                onUpload={handleFileUpload}
+                disabled={!isConnected}
+                maxSize={10 * 1024 * 1024} // 10MB
+              />
+            </div>
+          )}
         </div>
       </div>
 

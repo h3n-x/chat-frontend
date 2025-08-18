@@ -5,43 +5,27 @@ import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import { MessageReactions } from "./message-reactions"
-
-/**
- * Message interface defining the structure of chat messages
- */
-interface Message {
-  /** Unique identifier for the message */
-  id: string
-  /** Type of message: system notifications, regular chat, or private room messages */
-  type: "chat_message" | "system_message" | "room_message"
-  /** The actual message content */
-  message: string
-  /** Username of the sender (optional for system messages) */
-  username?: string
-  /** ISO timestamp when the message was sent */
-  timestamp: string
-  /** Hex color code associated with the user */
-  color?: string
-  /** Unique identifier of the user who sent the message */
-  user_id?: string
-  /** Room ID for private room messages */
-  room_id?: string
-  /** Object containing emoji reactions and their counts */
-  reactions?: Record<string, number>
-  /** Encrypted message data for E2EE messages */
-  encrypted?: any
-}
+import { FileMessage } from "./file-message"
+import { ChatMessage as ChatMessageType } from "@/lib/chat-api"
 
 /**
  * Props for the ChatMessage component
  */
 interface ChatMessageProps {
   /** The message object to display */
-  message: Message
+  message: ChatMessageType
   /** Callback function when user reacts to the message */
   onReact: (messageId: string, emoji: string) => void
   /** Whether this message was sent by the current user */
   isOwnMessage?: boolean
+  /** Function to get file URL by ID */
+  getFileUrl: (fileId: string) => string
+  /** Callback for file download */
+  onFileDownload?: (fileId: string, filename: string) => void
+  /** Callback for file preview */
+  onFilePreview?: (fileId: string, mimeType: string) => void
+  /** Callback for file deletion */
+  onFileDelete?: (fileId: string) => void
 }
 
 /**
@@ -59,7 +43,15 @@ interface ChatMessageProps {
  * @param {ChatMessageProps} props - Component props
  * @returns {JSX.Element} Rendered message component
  */
-export default function ChatMessage({ message, onReact, isOwnMessage = false }: ChatMessageProps) {
+export default function ChatMessage({ 
+  message, 
+  onReact, 
+  isOwnMessage = false,
+  getFileUrl,
+  onFileDownload,
+  onFilePreview,
+  onFileDelete
+}: ChatMessageProps) {
   /** Format timestamp to relative time in Spanish */
   const timeAgo = formatDistanceToNow(new Date(message.timestamp), {
     addSuffix: true,
@@ -117,13 +109,33 @@ export default function ChatMessage({ message, onReact, isOwnMessage = false }: 
               )}
               <span className="text-xs text-muted-foreground">{timeAgo}</span>
             </div>
-            <p
+            <div
               className={`text-card-foreground leading-relaxed font-serif break-words ${
                 isEncrypted ? "italic text-muted-foreground" : ""
               }`}
             >
-              {displayMessage}
-            </p>
+              {/* Mensaje de texto regular */}
+              {message.type !== "file_message" && (
+                <p>{displayMessage}</p>
+              )}
+
+              {/* Mensaje de archivo */}
+              {message.type === "file_message" && (
+                <div className="space-y-2">
+                  {message.message && (
+                    <p className="mb-3">{message.message}</p>
+                  )}
+                  <FileMessage
+                    message={message}
+                    getFileUrl={getFileUrl}
+                    onDownload={onFileDownload}
+                    onPreview={onFilePreview}
+                    onDelete={onFileDelete}
+                    canDelete={isOwnMessage}
+                  />
+                </div>
+              )}
+            </div>
 
             {/* Reactions */}
             <MessageReactions messageId={message.id} reactions={message.reactions} onReact={onReact} className="mt-2" />

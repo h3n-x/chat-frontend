@@ -1,10 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuración para despliegue estático
+  // Configuración para despliegue estático en Netlify
   output: 'export',
-  distDir: 'build', // Cambiar de 'out' a 'build' para Netlify
+  distDir: 'build',
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
+  
+  // Forzar que las variables de entorno se incluyan en el build estático
+  env: {
+    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  },
   
   eslint: {
     ignoreDuringBuilds: true,
