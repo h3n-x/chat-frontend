@@ -1,21 +1,29 @@
 <div align="center">
 
-# 🎨 Chat Anónimo - Frontend
+# 🎨 Chat Anónimo Frontend
 
-<div align="center">
+<p align="center">
+  <strong>Interfaz moderna y responsive para chat anónimo seguro con cifrado end-to-end</strong>
+</p>
 
-![Next.js](https://img.shields.io/badge/Next.js-14-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)
-![React](https://img.shields.io/badge/React-18+-61dafb)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-38b2ac)
-![Deploy](https://img.shields.io/badge/Deploy-Netlify-00C7B7)
-![Status](https://img.shields.io/website?url=https://write-ghost.netlify.app&label=Frontend%20Status)
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js" alt="Next.js">
+  <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=for-the-badge&logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react" alt="React">
+  <img src="https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss" alt="TailwindCSS">
+</p>
 
-**🌟 Interfaz moderna y responsive para chat anónimo seguro con cifrado end-to-end**
+<p align="center">
+  <img src="https://img.shields.io/website?url=https://write-ghost.netlify.app&label=Status&style=flat-square&color=success" alt="Status">
+  <img src="https://img.shields.io/badge/Deploy-Netlify-00C7B7?style=flat-square&logo=netlify" alt="Deploy">
+  <img src="https://api.visitorbadge.io/api/visitors?path=h3n-x%2Fchat-frontend&label=Visitors&countColor=%23263759&style=flat-square" alt="Visitors">
+</p>
 
-[🌐 **Demo en Vivo**](https://write-ghost.netlify.app) | [🚀 **Backend**](https://github.com/h3n-x/chat-backend) | [📖 **Docs Principales**](https://github.com/h3n-x/chat-anonimo)
-
-**📍 Repository:** `https://github.com/h3n-x/chat-frontend.git`
+<p align="center">
+  <a href="https://write-ghost.netlify.app"><strong>🌐 Demo en Vivo</strong></a> •
+  <a href="https://github.com/h3n-x/chat-backend"><strong>🚀 Backend</strong></a> •
+  <a href="https://github.com/h3n-x/chat-anonimo"><strong>📖 Documentación</strong></a>
+</p>
 
 </div>
 
@@ -23,89 +31,108 @@
 
 ## 📋 Tabla de Contenidos
 
-- [🚀 Quick Start](#-quick-start)
-- [✨ Características Principales](#-características-principales)
+<details>
+<summary><strong>Navegación Rápida</strong></summary>
+
+- [🚀 Inicio Rápido](#-inicio-rápido)
+- [✨ Características](#-características)
 - [🏗️ Arquitectura](#️-arquitectura)
-- [⚙️ Instalación Detallada](#️-instalación-detallada)
+- [⚙️ Instalación](#️-instalación)
 - [🔧 Configuración](#-configuración)
-- [🧩 Componentes Principales](#-componentes-principales)
+- [🧩 Componentes](#-componentes)
 - [🎨 Sistema de Diseño](#-sistema-de-diseño)
-- [📱 Responsive Design](#-responsive-design)
-- [🔐 Seguridad en Frontend](#-seguridad-en-frontend)
-- [🧪 Testing y Calidad](#-testing-y-calidad)
-- [🚀 Deployment](#-deployment)
 - [🛠️ Desarrollo](#️-desarrollo)
-- [🔗 Enlaces y Recursos](#-enlaces-y-recursos)
+- [🚀 Deployment](#-deployment)
+- [🔗 Enlaces](#-enlaces)
+
+</details>
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Inicio Rápido
 
-### ⚡ **Setup en 30 segundos**
+### ⚡ Setup en 30 segundos
 
 ```bash
-# 1️⃣ Clonar repositorio
+# Clonar e instalar
 git clone https://github.com/h3n-x/chat-frontend.git
-cd chat-frontend
+cd chat-frontend && npm install
 
-# 2️⃣ Instalar dependencias
-npm install
-
-# 3️⃣ Configurar variables de entorno
+# Configurar variables de entorno
 echo "NEXT_PUBLIC_WS_URL=wss://chat-backend-haeb.onrender.com" > .env.local
 echo "NEXT_PUBLIC_API_URL=https://chat-backend-haeb.onrender.com" >> .env.local
 
-# 4️⃣ Ejecutar en desarrollo
+# Ejecutar
 npm run dev
-
-# 🎉 Abrir: http://localhost:3000
 ```
 
-### 🎯 **Demo Instantáneo**
+<div align="center">
 
-¿No quieres instalar nada? **[Prueba la demo en vivo →](https://write-ghost.netlify.app)**
+**🎯 ¿Sin tiempo para instalar?**
+
+**[Prueba la demo en vivo →](https://write-ghost.netlify.app)**
+
+</div>
 
 ---
 
-## ✨ Características Principales
+## ✨ Características
 
-### 🎨 **Experiencia de Usuario**
-- 🌙 **Modo Oscuro/Claro** - Detección automática del sistema
-- 📱 **Totalmente Responsive** - Optimizado desde móviles hasta 4K
-- ⚡ **Performance Optimizada** - Carga en < 2 segundos
-- 🎭 **Animaciones Fluidas** - Transiciones suaves y profesionales
-- 🔔 **Notificaciones Smart** - Sistema de alerts elegante
-- 🎵 **Sonidos Opcionales** - Feedback auditivo para notificaciones
+<table>
+<tr>
+<td width="50%">
+
+### 🎨 **Experiencia de Usuario**]]] 🌙 **Modo Oscuro/Claro** automático
+- 📱 **Totalmente Responsive** (móvil → 4K)
+- ⚡ **Carga ultrarrápida** (< 2s)
+- 🎭 **Animaciones fluidas**
+- 🔔 **Notificaciones inteligentes**
+- 🎵 **Feedback auditivo opcional**
+
+</td>
+<td width="50%">
 
 ### 🔐 **Seguridad y Privacidad**
-- 🔒 **Cifrado en Cliente** - AES-256-GCM procesado localmente
-- 🔑 **Gestión Segura de Claves** - Claves nunca almacenadas persistentemente
-- 🚫 **Zero Tracking** - Sin cookies, sin analytics, sin persistencia
-- 🛡️ **Sanitización XSS** - Protección contra ataques de script
-- 🌐 **HTTPS Forzado** - Todas las conexiones seguras
+- 🔒 **Cifrado AES-256-GCM** en cliente
+- 🔑 **Gestión segura de claves**
+- 🚫 **Zero tracking** (sin cookies)
+- 🛡️ **Protección XSS**
+- 🌐 **HTTPS forzado**
+- 🔄 **Claves no persistentes**
+
+</td>
+</tr>
+<tr>
+<td width="50%">
 
 ### 💬 **Funcionalidades de Chat**
-- 📨 **Mensajes en Tiempo Real** - WebSocket con reconexión automática
-- 📁 **Drag & Drop de Archivos** - Subida intuitiva hasta 15MB
-- 🖼️ **Vista Previa de Imágenes** - Viewer integrado para multimedia
-- 👥 **Lista de Usuarios Live** - Estado de conexión en tiempo real
-- ✍️ **Indicador de Escritura** - Ver quién está escribiendo
-- 🏠 **Salas Privadas** - Códigos únicos de 6 dígitos
-- 📊 **Estado de Conexión** - Indicadores visuales claros
+- 📨 **Tiempo real** con WebSocket
+- 📁 **Drag & Drop** hasta 15MB
+- 🖼️ **Vista previa multimedia**
+- 👥 **Lista usuarios en vivo**
+- ✍️ **Indicador de escritura**
+- 🏠 **Salas privadas** (códigos 6 dígitos)
 
-### 🎛️ **Tecnología Avanzada**
-- ⚛️ **React 18** - Concurrent features y Suspense
-- 🔷 **TypeScript Estricto** - Type safety completa
-- 🏗️ **Next.js 14** - App Router y Server Components
-- 💨 **TailwindCSS** - Utility-first styling
-- 🎭 **Shadcn/UI** - Componentes accesibles y modernos
-- 🔄 **SWR/React Query** - Data fetching optimizado
+</td>
+<td width="50%">
+
+### 🎛️ **Stack Tecnológico**
+- ⚛️ **React 18** con Concurrent Features
+- 🔷 **TypeScript** estricto
+- 🏗️ **Next.js 14** App Router
+- 💨 **TailwindCSS** utility-first
+- 🎭 **Shadcn/UI** componentes accesibles
+- 🔄 **SWR** para data fetching
+
+</td>
+</tr>
+</table>
 
 ---
 
 ## 🏗️ Arquitectura
 
-### 📦 **Estructura de Componentes**
+### 📊 Diagrama de Componentes
 
 ```mermaid
 graph TB
@@ -132,7 +159,10 @@ graph TB
     style F fill:#e8f5e8
 ```
 
-### 🗂️ **Estructura de Directorios**
+### 📁 Estructura del Proyecto
+
+<details>
+<summary><strong>Ver estructura completa</strong></summary>
 
 ```
 chat-frontend/
@@ -198,23 +228,25 @@ chat-frontend/
 
 ---
 
-## ⚙️ Instalación Detallada
+## ⚙️ Instalación
 
-### 📋 **Requisitos del Sistema**
+### 📋 Requisitos del Sistema
 
-| Herramienta | Versión Mínima | Recomendada | Notas |
-|-------------|----------------|-------------|--------|
-| **Node.js** | 18.0.0 | 20.x LTS | Para mejor performance |
-| **npm** | 8.0.0 | 10.x | O usar pnpm/yarn |
-| **Git** | 2.20.0 | Latest | Para clonar repo |
-| **OS** | - | macOS/Linux/Windows | Multiplataforma |
+| Herramienta | Versión Mínima | Recomendada | 
+|-------------|----------------|-------------|
+| **Node.js** | 18.0.0 | 20.x LTS |
+| **npm** | 8.0.0 | 10.x |
+| **Git** | 2.20.0 | Latest |
 
-### 🛠️ **Proceso de Instalación Completo**
+### 🛠️ Instalación Paso a Paso
+
+<details>
+<summary><strong>Instalación Detallada</strong></summary>
 
 ```bash
 # 1️⃣ Verificar requisitos
-node --version    # Debe ser >= 18.0.0
-npm --version     # Debe ser >= 8.0.0
+node --version    # >= 18.0.0
+npm --version     # >= 8.0.0
 
 # 2️⃣ Clonar repositorio
 git clone https://github.com/h3n-x/chat-frontend.git
@@ -224,8 +256,6 @@ cd chat-frontend
 npm install
 # o usando pnpm (más rápido)
 pnpm install
-# o usando yarn
-yarn install
 
 # 4️⃣ Configurar variables de entorno
 cp .env.example .env.local
@@ -236,145 +266,207 @@ npm run dev
 
 # 6️⃣ Verificar instalación
 # Abrir: http://localhost:3000
-# Debería cargar la interfaz de chat
 ```
 
-### 🔧 **Scripts Disponibles**
+</details>
+
+---
+
+## 🔧 Configuración
+
+### 🌍 Variables de Entorno
+
+```bash
+# .env.local
+NEXT_PUBLIC_WS_URL=wss://chat-backend-haeb.onrender.com
+NEXT_PUBLIC_API_URL=https://chat-backend-haeb.onrender.com
+NEXT_PUBLIC_MAX_FILE_SIZE=15728640  # 15MB
+NEXT_PUBLIC_SUPPORTED_FORMATS=jpg,jpeg,png,gif,pdf,txt,doc,docx
+```
+
+### 🎛️ Scripts Disponibles
+
+<details>
+<summary><strong>Ver todos los scripts</strong></summary>
 
 ```bash
 # 🏃 Desarrollo
-npm run dev          # Servidor desarrollo con hot-reload
-npm run dev:turbo    # Modo turbo (experimental)
+npm run dev          # Servidor desarrollo
+npm run dev:turbo    # Modo turbo
 
 # 🏗️ Build
-npm run build        # Build para producción
-npm run export       # Export estático para Netlify
-npm run start        # Servidor producción local
+npm run build        # Build producción
+npm run start        # Servidor producción
+npm run export       # Export estático
 
 # 🧪 Testing
 npm run test         # Tests unitarios
-npm run test:watch   # Tests en modo watch
-npm run test:coverage # Coverage report
-npm run e2e          # Tests end-to-end (Playwright)
+npm run test:watch   # Tests en watch
+npm run e2e          # Tests e2e
 
 # 📊 Code Quality
 npm run lint         # ESLint
-npm run lint:fix     # Auto-fix linting
 npm run format       # Prettier
-npm run type-check   # TypeScript check
+npm run type-check   # TypeScript
 
 # 📖 Documentación
 npm run storybook    # Storybook server
-npm run build-storybook # Build storybook
-
-# 🔍 Análisis
 npm run analyze      # Bundle analyzer
-npm run lighthouse   # Performance audit
 ```
+
+</details>
 
 ---
 
 ## 🎨 Sistema de Diseño
 
-### 🌈 **Paleta de Colores**
+### 🌈 Paleta de Colores
+
+<table>
+<tr>
+<td width="50%">
+
+**🌞 Modo Claro**
+```css
+--background: 0 0% 100%;
+--foreground: 222.2 84% 4.9%;
+--primary: 221.2 83.2% 53.3%;
+--secondary: 210 40% 96%;
+--muted: 210 40% 96%;
+--accent: 210 40% 96%;
+--destructive: 0 84.2% 60.2%;
+--border: 214.3 31.8% 91.4%;
+```
+
+</td>
+<td width="50%">
+
+**🌙 Modo Oscuro**
+```css
+--background: 222.2 84% 4.9%;
+--foreground: 210 40% 98%;
+--primary: 217.2 91.2% 59.8%;
+--secondary: 217.2 32.6% 17.5%;
+--muted: 217.2 32.6% 17.5%;
+--accent: 217.2 32.6% 17.5%;
+--destructive: 0 62.8% 30.6%;
+--border: 217.2 32.6% 17.5%;
+```
+
+</td>
+</tr>
+</table>
+
+### 📱 Responsive Breakpoints
 
 ```css
-/* globals.css */
-:root {
-  /* 🌞 Modo claro */
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 84% 4.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-  --radius: 0.5rem;
-}
-
-.dark {
-  /* 🌙 Modo oscuro */
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 84% 4.9%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 94.1%;
-}
+/* Tailwind Breakpoints */
+sm: 640px   /* Móvil grande */
+md: 768px   /* Tablet */
+lg: 1024px  /* Desktop */
+xl: 1280px  /* Desktop grande */
+2xl: 1536px /* 4K */
 ```
+
 ---
 
 ## 🛠️ Desarrollo
 
-### 🔧 **Environment Setup para Desarrollo**
+### 🔧 Setup para Desarrollo
 
 ```bash
-# 1️⃣ Setup inicial completo
+# Setup completo
 git clone https://github.com/h3n-x/chat-frontend.git
 cd chat-frontend
 
-# 2️⃣ Instalar herramientas globales
+# Instalar herramientas globales
 npm install -g @playwright/test
 
-# 3️⃣ Setup del proyecto
+# Setup del proyecto
 npm install
-npm run setup  # Script personalizado para configuración
+npm run setup
+npm run prepare  # Git hooks
+```
 
-# 4️⃣ Configurar Git hooks
-npm run prepare  # Instala husky para pre-commit hooks
+### 🧪 Testing
+
+```bash
+# Tests unitarios
+npm run test
+
+# Tests con coverage
+npm run test:coverage
+
+# Tests e2e
+npm run e2e
+
+# Tests en modo watch
+npm run test:watch
+```
+
+### 📊 Code Quality
+
+```bash
+# Linting
+npm run lint
+npm run lint:fix
+
+# Formateo
+npm run format
+
+# Type checking
+npm run type-check
+
+# Bundle analysis
+npm run analyze
+```
+
+---
+
+## 🚀 Deployment
+
+### 🌐 Netlify (Recomendado)
+
+```bash
+# Build para producción
+npm run build
+npm run export
+
+# Deploy automático via Git
+# Conectar repo en Netlify Dashboard
+```
+
+### ⚙️ Variables de Entorno en Producción
+
+```bash
+NEXT_PUBLIC_WS_URL=wss://tu-backend.com
+NEXT_PUBLIC_API_URL=https://tu-backend.com
 ```
 
 ---
 
 ## 🔗 Enlaces y Recursos
 
-### 📚 **Documentación y Referencias**
-- 🏠 **[Documentación Principal](https://github.com/h3n-x/chat-anonimo)** - Overview completo del proyecto
-- 🚀 **[Backend Repository](https://github.com/h3n-x/chat-backend)** - API y servidor FastAPI
-- 📖 **[Next.js Docs](https://nextjs.org/docs)** - Documentación oficial de Next.js
-- ⚛️ **[React Docs](https://react.dev)** - Documentación oficial de React
-- 💨 **[TailwindCSS Docs](https://tailwindcss.com/docs)** - Documentación de TailwindCSS
-- 🎭 **[Shadcn/UI](https://ui.shadcn.com)** - Componentes de UI
+### 📚 **Documentación**
+- 🏠 [**Documentación Principal**](https://github.com/h3n-x/chat-anonimo)
+- 🚀 [**Backend Repository**](https://github.com/h3n-x/chat-backend)
+- 📖 [**Next.js Docs**](https://nextjs.org/docs)
+- 💨 [**TailwindCSS Docs**](https://tailwindcss.com/docs)
 
-### 🤝 **Contribución y Comunidad**
-- 🐛 **[Issues](https://github.com/h3n-x/chat-frontend/issues)** - Reportar bugs o solicitar features
-- 💬 **[Discussions](https://github.com/h3n-x/chat-frontend/discussions)** - Preguntas y discusiones
-- 📋 **[Project Board](https://github.com/h3n-x/chat-frontend/projects)** - Roadmap y tareas
-- 🔄 **[Pull Requests](https://github.com/h3n-x/chat-frontend/pulls)** - Contribuciones pendientes
+### 🤝 **Contribución**
+- 🐛 [**Issues**](https://github.com/h3n-x/chat-frontend/issues)
+- 💬 [**Discussions**](https://github.com/h3n-x/chat-frontend/discussions)
+- 🔄 [**Pull Requests**](https://github.com/h3n-x/chat-frontend/pulls)
 
-### 🚀 **Deployment y Monitoreo**
-- 🌐 **[Frontend Live](https://write-ghost.netlify.app)** - Aplicación en producción
-- 📊 **[Netlify Dashboard](https://app.netlify.com/sites/write-ghost)** - Panel de control de deployment
-- 🔍 **[Lighthouse Report](https://pagespeed.web.dev/analysis/https-write-ghost-netlify-app)** - Análisis de performance
-- 📈 **[Bundle Analyzer](https://bundlephobia.com)** - Análisis de tamaño de bundle
+### 🚀 **Deployment**
+- 🌐 [**Frontend Live**](https://write-ghost.netlify.app)
+- 📊 [**Netlify Dashboard**](https://app.netlify.com/sites/write-ghost)
+- 🔍 [**Performance Report**](https://pagespeed.web.dev/analysis/https-write-ghost-netlify-app)
 
-### 🛠️ **Herramientas de Desarrollo**
-- 📖 **[Storybook](http://localhost:6006)** - Catálogo de componentes (modo dev)
-- 🧪 **[Testing Playground](https://testing-playground.com)** - Selector de elementos para tests
-- 🎨 **[Tailwind Play](https://play.tailwindcss.com)** - Playground para Tailwind
-- 🔧 **[TypeScript Playground](https://www.typescriptlang.org/play)** - Playground para TypeScript
-
-### 📊 **Performance y Analytics**
-- ⚡ **[Web Vitals](https://web.dev/vitals)** - Métricas de performance web
-- 🔍 **[Lighthouse](https://developers.google.com/web/tools/lighthouse)** - Auditoría de calidad web
-- 📈 **[Core Web Vitals](https://pagespeed.web.dev)** - Análisis de métricas vitales
+### 🛠️ **Herramientas**
+- 📖 [**Storybook**](http://localhost:6006) (modo dev)
+- 🧪 [**Testing Playground**](https://testing-playground.com)
+- 🎨 [**Tailwind Play**](https://play.tailwindcss.com)
 
 ---
 
@@ -384,14 +476,18 @@ npm run prepare  # Instala husky para pre-commit hooks
 
 **Interfaz moderna, segura y privada para comunicación anónima**
 
-🌟 **[Prueba la Demo](https://write-ghost.netlify.app)** | 🤝 **[Contribuir](https://github.com/h3n-x/chat-frontend/issues)** | 📖 **[Documentación](https://github.com/h3n-x/chat-anonimo)**
+<p align="center">
+  <a href="https://write-ghost.netlify.app">🌟 <strong>Prueba la Demo</strong></a> •
+  <a href="https://github.com/h3n-x/chat-frontend/issues">🤝 <strong>Contribuir</strong></a> •
+  <a href="https://github.com/h3n-x/chat-anonimo">📖 <strong>Documentación</strong></a>
+</p>
 
 ---
 
-**Made with ❤️ for privacy, security, and great user experience**
+**Hecho con ❤️ para la privacidad, seguridad y gran experiencia de usuario**
 
-![Visitors](https://api.visitorbadge.io/api/visitors?path=h3n-x%2Fchat-frontend&label=Visitors&countColor=%23263759)
-
-[⬆️ Volver al inicio](#-chat-anónimo---frontend)
+<p align="center">
+  <a href="#-chat-anónimo-frontend">⬆️ Volver al inicio</a>
+</p>
 
 </div>
