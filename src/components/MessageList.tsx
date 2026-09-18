@@ -9,6 +9,7 @@ import {
   Eye,
   Flame,
   Smile,
+  X,
 } from 'lucide-react';
 import { ChatMessage } from '../types';
 import { FileAttachment } from './FileAttachment';
@@ -151,51 +152,24 @@ export const MessageList: React.FC<MessageListProps> = ({
                 {formatTime(msg.timestamp)}
               </span>
 
-              {/* Quick Reactions: Mobile Tap Trigger + Desktop Hover Menu */}
+              {/* Quick Reactions Trigger Button */}
               {onReact && (
-                <div className="relative flex items-center">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveReactionMsgId((prev) => (prev === msg.id ? null : msg.id));
-                    }}
-                    className={`p-1 rounded-full transition-all ${
-                      activeReactionMsgId === msg.id
-                        ? 'text-amber-400 bg-neutral-800 ring-1 ring-amber-500/60 opacity-100'
-                        : 'text-neutral-500 hover:text-amber-400 opacity-60 sm:opacity-0 group-hover:opacity-100'
-                    }`}
-                    title="Reaccionar"
-                    aria-label="Reaccionar al mensaje"
-                  >
-                    <Smile className="w-3.5 h-3.5" />
-                  </button>
-
-                  {/* Emoji Floating Bar */}
-                  <div
-                    className={`absolute bottom-full mb-1 z-30 flex items-center gap-1 bg-neutral-900/95 border border-neutral-750 rounded-full px-2 py-1 shadow-2xl backdrop-blur-md transition-all select-none ${
-                      activeReactionMsgId === msg.id
-                        ? 'opacity-100 scale-100 pointer-events-auto'
-                        : 'opacity-0 scale-95 pointer-events-none sm:group-hover:opacity-100 sm:group-hover:scale-100 sm:group-hover:pointer-events-auto'
-                    } ${msg.is_self ? 'right-0' : 'left-0'}`}
-                  >
-                    {REACTION_EMOJIS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onReact(msg.id, emoji);
-                          setActiveReactionMsgId(null);
-                        }}
-                        className="text-base sm:text-xs hover:scale-130 active:scale-95 transition-transform p-1 rounded-full hover:bg-neutral-800 cursor-pointer"
-                        title={`Reaccionar con ${emoji}`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveReactionMsgId((prev) => (prev === msg.id ? null : msg.id));
+                  }}
+                  className={`p-1 rounded-full transition-all flex items-center justify-center ${
+                    activeReactionMsgId === msg.id
+                      ? 'text-amber-400 bg-neutral-800 ring-1 ring-amber-500/60 opacity-100'
+                      : 'text-neutral-400 hover:text-amber-400 hover:bg-neutral-800/80 active:scale-90 opacity-80 sm:opacity-0 group-hover:opacity-100'
+                  }`}
+                  title="Reaccionar al mensaje"
+                  aria-label="Reaccionar al mensaje"
+                >
+                  <Smile className="w-3.5 h-3.5" />
+                </button>
               )}
 
               {msg.burn_expires_at && (
@@ -459,6 +433,54 @@ export const MessageList: React.FC<MessageListProps> = ({
       )}
 
       <div ref={bottomRef} />
+
+      {/* Centered Reaction Picker Modal - Completely immune to overflow clipping */}
+      {activeReactionMsgId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in select-none"
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveReactionMsgId(null);
+          }}
+        >
+          <div
+            className="bg-neutral-900 border border-neutral-750 rounded-3xl p-4 shadow-2xl flex flex-col items-center gap-3 animate-scale-in max-w-xs w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between w-full px-1">
+              <span className="text-xs font-semibold text-neutral-300">Reaccionar al mensaje</span>
+              <button
+                type="button"
+                onClick={() => setActiveReactionMsgId(null)}
+                className="text-neutral-500 hover:text-neutral-200 p-1 rounded-lg hover:bg-neutral-800 transition-colors"
+                title="Cerrar"
+                aria-label="Cerrar selector de reacciones"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 sm:gap-3 bg-neutral-950/90 p-2.5 rounded-2xl border border-neutral-800 shadow-inner w-full">
+              {REACTION_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => {
+                    if (activeReactionMsgId && onReact) {
+                      onReact(activeReactionMsgId, emoji);
+                    }
+                    setActiveReactionMsgId(null);
+                  }}
+                  className="text-3xl sm:text-2xl p-2 sm:p-2.5 rounded-xl hover:bg-neutral-800 active:scale-125 hover:scale-115 transition-all cursor-pointer"
+                  title={`Reaccionar con ${emoji}`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

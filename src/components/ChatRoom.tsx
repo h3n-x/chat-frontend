@@ -111,6 +111,23 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close mobile menu when clicking or touching outside
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [isMobileMenuOpen]);
 
   // Esc x 3 Panic shortcut detector
   const escCountRef = useRef<number>(0);
@@ -135,27 +152,18 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
       if (e.key === 'Escape') {
         escCountRef.current += 1;
         if (escTimerRef.current) clearTimeout(escTimerRef.current);
+        escTimerRef.current = window.setTimeout(() => {
+          escCountRef.current = 0;
+        }, 1500);
 
         if (escCountRef.current >= 3) {
           escCountRef.current = 0;
           onNuke();
-        } else {
-          escTimerRef.current = window.setTimeout(() => {
-            escCountRef.current = 0;
-          }, 1500);
         }
       }
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      // Clear clipboard and blur overlay if PrintScreen is detected
-      if (e.key === 'PrintScreen') {
-        try {
-          navigator.clipboard.writeText('');
-        } catch {}
-        setIsBlurred(true);
-      }
-    };
+    const handleKeyUp = () => {};
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -179,7 +187,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
       window.removeEventListener('blur', handleBlur);
       if (escTimerRef.current) clearTimeout(escTimerRef.current);
     };
-  }, [onNuke]);
+  }, [onNuke, onDuress]);
 
   const shareUrl = `${window.location.origin}/#room=${roomId}&key=${encodeURIComponent(roomKeyBase64)}`;
 
@@ -282,7 +290,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
       />
 
       {/* Top Header */}
-      <header className="px-3 sm:px-4 py-2.5 bg-neutral-900/90 border-b border-neutral-800 backdrop-blur-md flex items-center justify-between gap-2 shrink-0">
+      <header className="relative z-50 px-3 sm:px-4 py-2.5 bg-neutral-900/90 border-b border-neutral-800 backdrop-blur-md flex items-center justify-between gap-2 shrink-0">
         {/* Left: Room Badge and Identity */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5 bg-neutral-950 border border-neutral-800 px-2.5 py-1 rounded-xl">
@@ -415,7 +423,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
           </div>
 
           {/* Mobile-only 3-dots Menu Button & Dropdown */}
-          <div className="relative sm:hidden">
+          <div className="relative sm:hidden" ref={mobileMenuRef}>
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen((prev) => !prev)}
@@ -434,10 +442,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
             {isMobileMenuOpen && (
               <>
                 <div
-                  className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs"
+                  className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs"
                   onClick={() => setIsMobileMenuOpen(false)}
                 />
-                <div className="absolute right-0 top-full mt-2 w-56 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 text-xs animate-fade-in">
+                <div className="absolute right-0 top-full mt-2 w-56 bg-neutral-900 border border-neutral-750 rounded-2xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 text-xs animate-fade-in">
                   {/* Search in RAM */}
                   <button
                     onClick={() => {
@@ -562,7 +570,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
       )}
 
       {/* Sub-header: Security & Status */}
-      <div className="px-4 py-2 shrink-0 space-y-2">
+      <div className="px-4 py-2 shrink-0 space-y-2 relative z-20">
         <SecurityBadge
           fingerprint={fingerprint}
           participantCount={participantCount}
