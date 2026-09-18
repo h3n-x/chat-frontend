@@ -1,493 +1,128 @@
 <div align="center">
 
-# 🎨 Chat Anónimo Frontend
+# 🔒 Chat Anónimo — Frontend (Client-Side E2EE v2.0)
 
-<p align="center">
-  <strong>Interfaz moderna y responsive para chat anónimo seguro con cifrado end-to-end</strong>
-</p>
+![React](https://img.shields.io/badge/React-19.0+-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-6.0+-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-Strict_5.7+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![WebCrypto](https://img.shields.io/badge/WebCrypto-Native_AES--256--GCM-10B981?style=for-the-badge&logo=shield&logoColor=white)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js" alt="Next.js">
-  <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=for-the-badge&logo=typescript" alt="TypeScript">
-  <img src="https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react" alt="React">
-  <img src="https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss" alt="TailwindCSS">
-</p>
+**Aplicación web cliente (SPA) con cifrado de extremo a extremo real ejecutado en el navegador, cero persistencia y diseño accesible WCAG 2.2 AA.**
 
-<p align="center">
-  <img src="https://img.shields.io/website?url=https://write-ghost.netlify.app&label=Status&style=flat-square&color=success" alt="Status">
-  <img src="https://img.shields.io/badge/Deploy-Netlify-00C7B7?style=flat-square&logo=netlify" alt="Deploy">
-  <img src="https://api.visitorbadge.io/api/visitors?path=h3n-x%2Fchat-frontend&label=Visitors&countColor=%23263759&style=flat-square" alt="Visitors">
-</p>
-
-<p align="center">
-  <a href="https://write-ghost.netlify.app"><strong>🌐 Demo en Vivo</strong></a> •
-  <a href="https://github.com/h3n-x/chat-backend"><strong>🚀 Backend</strong></a> •
-  <a href="https://github.com/h3n-x/chat-anonimo"><strong>📖 Documentación</strong></a>
-</p>
+[🏠 Repositorio Umbrella](https://github.com/h3n-x/chat-anonimo) • [🚀 Backend Blind Relay](https://github.com/h3n-x/chat-backend) • [🌐 Demo en Vivo](https://write-ghost.netlify.app)
 
 </div>
 
 ---
 
-## 📋 Tabla de Contenidos
+## 🛡️ Arquitectura Criptográfica del Cliente (v2.0)
 
-<details>
-<summary><strong>Navegación Rápida</strong></summary>
+El cliente de Chat Anónimo v2.0 fue reescrito desde cero para erradicar las vulnerabilidades del diseño anterior (fallbacks débiles a XOR, generación de claves en el servidor y scripts rotos). Todas las operaciones criptográficas se ejecutan de manera aislada en la memoria RAM del navegador mediante la API nativa **`window.crypto.subtle`**.
 
-- [🚀 Inicio Rápido](#-inicio-rápido)
-- [✨ Características](#-características)
-- [🏗️ Arquitectura](#️-arquitectura)
-- [⚙️ Instalación](#️-instalación)
-- [🔧 Configuración](#-configuración)
-- [🧩 Componentes](#-componentes)
-- [🎨 Sistema de Diseño](#-sistema-de-diseño)
-- [🛠️ Desarrollo](#️-desarrollo)
-- [🚀 Deployment](#-deployment)
-- [🔗 Enlaces](#-enlaces)
-
-</details>
+### 1. Primitivas Criptográficas Estándar
+- **Cifrado Simétrico Principal:** `AES-256-GCM` (NIST SP 800-38D).
+  - Claves de 256 bits generadas con CSPRNG del navegador (`crypto.getRandomValues`).
+  - Vector de Inicialización (IV): 12 bytes aleatorios únicos por cada mensaje o archivo.
+  - Tag de Autenticación: 128 bits para garantizar integridad e impedir modificaciones.
+- **Autenticación de Datos Asociados (AAD):** Cada operación AES-GCM vincula criptográficamente el identificador de la sala:
+  $$\text{AAD} = \text{UTF-8}(\text{"room:"} + room\_id)$$
+  *Cualquier intento de retransmitir o inyectar un mensaje capturado en otra sala provocará un fallo inmediato en la verificación del tag.*
+- **Acuerdo de Claves Asimétrico:** `ECDH (P-256)` efímero para el intercambio de claves entre clientes cuando se unen mediante código de sala.
+- **Verificación MITM (Fingerprint SAS):** Código de autenticación corto de 4 palabras (Short Authentication String) derivado de `SHA-256(RoomKey)` para verificación visual fuera de banda.
 
 ---
 
-## 🚀 Inicio Rápido
+## 🔑 Métodos de Conexión a Salas
 
-### ⚡ Setup en 30 segundos
+### Método A: Enlace Directo Zero-Knowledge (Recomendado)
+- El anfitrión crea la sala y genera la `RoomKey` localmente.
+- Se genera un enlace que incluye la clave simétrica en el **Hash Fragment** de la URL:
+  ```text
+  https://write-ghost.netlify.app/#room=K7M9P2&key=base64_256bit_key
+  ```
+- **Privacidad RFC 3986:** Por especificación del protocolo HTTP, los fragmentos después de `#` **jamás se envían al servidor** en las peticiones HTTP ni en cabeceras `Referer`. El servidor nunca tiene visibilidad de la clave.
+
+### Método B: Unión por Código + Handshake ECDH
+- El participante ingresa el código `K7M9P2`.
+- Genera un par de claves efímero ECDH (`sk_Bob`, `pk_Bob`) y solicita la clave de la sala vía WebSocket.
+- Un participante existente en la sala recibe la petición, deriva una clave de envoltura (`K_wrap`), cifra la `RoomKey` con AES-GCM y la envía de vuelta.
+- El servidor solo actúa como enrutador ciego (*Blind Relay*) del handshake.
+
+---
+
+## 🚨 Política de No-Degradación ("Fail-Closed")
+
+- Si la aplicación se ejecuta en un contexto no seguro (HTTP sin SSL) o en un navegador que no soporte `window.crypto.subtle`:
+  - Se bloquea la interfaz de forma no descartable mediante el componente **`FailClosedBanner`**.
+  - **No existe modo de degradación ni algoritmos alternativos:** Se eliminó todo código de fallback a XOR o generadores pseudoaleatorios débiles (`Math.random`).
+
+---
+
+## 📁 Transferencia Segura de Archivos
+
+1. **Cifrado en Memoria:** El archivo se lee como `ArrayBuffer`, se empaqueta con su nombre original y tipo MIME, y se cifra con `AES-256-GCM` antes de enviarse.
+2. **Subida en Streaming:** El archivo cifrado se transmite mediante HTTP POST en bloques de 64 KB hacia el relay con un tope estricto de **15 MB**.
+3. **Descarga y Descifrado Local:** El receptor descarga el blob cifrado `.enc` opaco y lo descifra en memoria local, creando un Object URL temporal sin tocar el disco del servidor.
+
+---
+
+## 🧪 Pruebas Unitarias del Módulo Criptográfico
+
+La suite de pruebas con **Vitest** valida todas las primitivas criptográficas directamente contra la implementación de WebCrypto:
 
 ```bash
-# Clonar e instalar
-git clone https://github.com/h3n-x/chat-frontend.git
-cd chat-frontend && npm install
-
-# Configurar variables de entorno
-echo "NEXT_PUBLIC_WS_URL=wss://chat-backend-haeb.onrender.com" > .env.local
-echo "NEXT_PUBLIC_API_URL=https://chat-backend-haeb.onrender.com" >> .env.local
-
-# Ejecutar
-npm run dev
-```
-
-<div align="center">
-
-**🎯 ¿Sin tiempo para instalar?**
-
-**[Prueba la demo en vivo →](https://write-ghost.netlify.app)**
-
-</div>
-
----
-
-## ✨ Características
-
-<table>
-<tr>
-<td width="50%">
-
-### 🎨 **Experiencia de Usuario**]]] 🌙 **Modo Oscuro/Claro** automático
-- 📱 **Totalmente Responsive** (móvil → 4K)
-- ⚡ **Carga ultrarrápida** (< 2s)
-- 🎭 **Animaciones fluidas**
-- 🔔 **Notificaciones inteligentes**
-- 🎵 **Feedback auditivo opcional**
-
-</td>
-<td width="50%">
-
-### 🔐 **Seguridad y Privacidad**
-- 🔒 **Cifrado AES-256-GCM** en cliente
-- 🔑 **Gestión segura de claves**
-- 🚫 **Zero tracking** (sin cookies)
-- 🛡️ **Protección XSS**
-- 🌐 **HTTPS forzado**
-- 🔄 **Claves no persistentes**
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 💬 **Funcionalidades de Chat**
-- 📨 **Tiempo real** con WebSocket
-- 📁 **Drag & Drop** hasta 15MB
-- 🖼️ **Vista previa multimedia**
-- 👥 **Lista usuarios en vivo**
-- ✍️ **Indicador de escritura**
-- 🏠 **Salas privadas** (códigos 6 dígitos)
-
-</td>
-<td width="50%">
-
-### 🎛️ **Stack Tecnológico**
-- ⚛️ **React 18** con Concurrent Features
-- 🔷 **TypeScript** estricto
-- 🏗️ **Next.js 14** App Router
-- 💨 **TailwindCSS** utility-first
-- 🎭 **Shadcn/UI** componentes accesibles
-- 🔄 **SWR** para data fetching
-
-</td>
-</tr>
-</table>
-
----
-
-## 🏗️ Arquitectura
-
-### 📊 Diagrama de Componentes
-
-```mermaid
-graph TB
-    A[🎨 App Layout] --> B[💬 Chat Interface]
-    A --> C[🌙 Theme Provider]
-    A --> D[🔔 Toast System]
-    
-    B --> E[📝 Message List]
-    B --> F[⌨️ Input Area]
-    B --> G[👥 User Sidebar]
-    B --> H[📁 File Upload]
-    
-    E --> I[💭 Message Bubble]
-    E --> J[📎 File Message]
-    E --> K[⚡ System Message]
-    
-    F --> L[🎤 Voice Input]
-    F --> M[😀 Emoji Picker]
-    F --> N[📸 Media Capture]
-    
-    style A fill:#f3e5f5
-    style B fill:#e1f5fe
-    style E fill:#fff3e0
-    style F fill:#e8f5e8
-```
-
-### 📁 Estructura del Proyecto
-
-<details>
-<summary><strong>Ver estructura completa</strong></summary>
-
-```
-chat-frontend/
-├── 📱 app/                    # Next.js 14 App Router
-│   ├── 🏠 page.tsx           # Página principal
-│   ├── 🎨 layout.tsx         # Layout raíz
-│   ├── 🌐 globals.css        # Estilos globales
-│   └── 🔧 not-found.tsx      # Página 404
-├── 🧩 components/             # Componentes React
-│   ├── 💬 chat/              # Componentes de chat
-│   │   ├── interface.tsx     # Interfaz principal
-│   │   ├── message.tsx       # Componente mensaje
-│   │   ├── input.tsx         # Input de mensaje
-│   │   └── user-list.tsx     # Lista usuarios
-│   ├── 📁 file/              # Gestión de archivos
-│   │   ├── upload.tsx        # Drag & drop
-│   │   ├── preview.tsx       # Vista previa
-│   │   └── progress.tsx      # Barra progreso
-│   ├── 🏠 room/              # Gestión salas
-│   │   ├── manager.tsx       # Crear/unirse
-│   │   ├── list.tsx          # Lista salas
-│   │   └── settings.tsx      # Configuración
-│   ├── 🎭 ui/                # Componentes base UI
-│   │   ├── button.tsx        # Botones
-│   │   ├── input.tsx         # Inputs
-│   │   ├── modal.tsx         # Modales
-│   │   ├── toast.tsx         # Notificaciones
-│   │   └── ...               # Más componentes
-│   └── 🔔 notifications/     # Sistema notificaciones
-├── 🔧 lib/                   # Utilidades y lógica
-│   ├── 📡 api/               # Comunicación backend
-│   │   ├── websocket.ts      # Gestión WebSocket
-│   │   ├── http.ts           # Requests HTTP
-│   │   └── types.ts          # Tipos TypeScript
-│   ├── 🔐 crypto/            # Cifrado frontend
-│   │   ├── aes.ts            # Implementación AES
-│   │   ├── keys.ts           # Gestión claves
-│   │   └── utils.ts          # Utilidades crypto
-│   ├── 🛠️ utils/             # Utilidades generales
-│   │   ├── format.ts         # Formateo datos
-│   │   ├── validation.ts     # Validaciones
-│   │   └── constants.ts      # Constantes
-│   └── 🎨 styles/            # Configuración estilos
-├── 📦 hooks/                 # Custom React Hooks
-│   ├── 📱 use-mobile.ts      # Detección móvil
-│   ├── 🔔 use-toast.ts       # Sistema toast
-│   ├── 🌙 use-theme.ts       # Gestión tema
-│   ├── 📡 use-websocket.ts   # WebSocket hook
-│   └── 🔐 use-crypto.ts      # Cifrado hook
-├── 🎯 public/                # Recursos estáticos
-│   ├── 🖼️ images/            # Imágenes
-│   ├── 🔊 sounds/            # Sonidos notificación
-│   ├── 🎨 icons/             # Iconos SVG
-│   └── 📄 manifest.json      # PWA manifest
-├── 🧪 __tests__/             # Tests unitarios
-├── 📊 .storybook/            # Storybook config
-├── 🔧 config/                # Configuraciones
-│   ├── tailwind.config.js    # TailwindCSS
-│   ├── next.config.mjs       # Next.js
-│   └── tsconfig.json         # TypeScript
-└── 📦 package.json           # Dependencias
-```
-
----
-
-## ⚙️ Instalación
-
-### 📋 Requisitos del Sistema
-
-| Herramienta | Versión Mínima | Recomendada | 
-|-------------|----------------|-------------|
-| **Node.js** | 18.0.0 | 20.x LTS |
-| **npm** | 8.0.0 | 10.x |
-| **Git** | 2.20.0 | Latest |
-
-### 🛠️ Instalación Paso a Paso
-
-<details>
-<summary><strong>Instalación Detallada</strong></summary>
-
-```bash
-# 1️⃣ Verificar requisitos
-node --version    # >= 18.0.0
-npm --version     # >= 8.0.0
-
-# 2️⃣ Clonar repositorio
-git clone https://github.com/h3n-x/chat-frontend.git
-cd chat-frontend
-
-# 3️⃣ Instalar dependencias
-npm install
-# o usando pnpm (más rápido)
-pnpm install
-
-# 4️⃣ Configurar variables de entorno
-cp .env.example .env.local
-# Editar .env.local con tus configuraciones
-
-# 5️⃣ Ejecutar en desarrollo
-npm run dev
-
-# 6️⃣ Verificar instalación
-# Abrir: http://localhost:3000
-```
-
-</details>
-
----
-
-## 🔧 Configuración
-
-### 🌍 Variables de Entorno
-
-```bash
-# .env.local
-NEXT_PUBLIC_WS_URL=wss://chat-backend-haeb.onrender.com
-NEXT_PUBLIC_API_URL=https://chat-backend-haeb.onrender.com
-NEXT_PUBLIC_MAX_FILE_SIZE=15728640  # 15MB
-NEXT_PUBLIC_SUPPORTED_FORMATS=jpg,jpeg,png,gif,pdf,txt,doc,docx
-```
-
-### 🎛️ Scripts Disponibles
-
-<details>
-<summary><strong>Ver todos los scripts</strong></summary>
-
-```bash
-# 🏃 Desarrollo
-npm run dev          # Servidor desarrollo
-npm run dev:turbo    # Modo turbo
-
-# 🏗️ Build
-npm run build        # Build producción
-npm run start        # Servidor producción
-npm run export       # Export estático
-
-# 🧪 Testing
-npm run test         # Tests unitarios
-npm run test:watch   # Tests en watch
-npm run e2e          # Tests e2e
-
-# 📊 Code Quality
-npm run lint         # ESLint
-npm run format       # Prettier
-npm run type-check   # TypeScript
-
-# 📖 Documentación
-npm run storybook    # Storybook server
-npm run analyze      # Bundle analyzer
-```
-
-</details>
-
----
-
-## 🎨 Sistema de Diseño
-
-### 🌈 Paleta de Colores
-
-<table>
-<tr>
-<td width="50%">
-
-**🌞 Modo Claro**
-```css
---background: 0 0% 100%;
---foreground: 222.2 84% 4.9%;
---primary: 221.2 83.2% 53.3%;
---secondary: 210 40% 96%;
---muted: 210 40% 96%;
---accent: 210 40% 96%;
---destructive: 0 84.2% 60.2%;
---border: 214.3 31.8% 91.4%;
-```
-
-</td>
-<td width="50%">
-
-**🌙 Modo Oscuro**
-```css
---background: 222.2 84% 4.9%;
---foreground: 210 40% 98%;
---primary: 217.2 91.2% 59.8%;
---secondary: 217.2 32.6% 17.5%;
---muted: 217.2 32.6% 17.5%;
---accent: 217.2 32.6% 17.5%;
---destructive: 0 62.8% 30.6%;
---border: 217.2 32.6% 17.5%;
-```
-
-</td>
-</tr>
-</table>
-
-### 📱 Responsive Breakpoints
-
-```css
-/* Tailwind Breakpoints */
-sm: 640px   /* Móvil grande */
-md: 768px   /* Tablet */
-lg: 1024px  /* Desktop */
-xl: 1280px  /* Desktop grande */
-2xl: 1536px /* 4K */
-```
-
----
-
-## 🛠️ Desarrollo
-
-### 🔧 Setup para Desarrollo
-
-```bash
-# Setup completo
-git clone https://github.com/h3n-x/chat-frontend.git
-cd chat-frontend
-
-# Instalar herramientas globales
-npm install -g @playwright/test
-
-# Setup del proyecto
-npm install
-npm run setup
-npm run prepare  # Git hooks
-```
-
-### 🧪 Testing
-
-```bash
-# Tests unitarios
+# Ejecutar pruebas unitarias de criptografía
 npm run test
-
-# Tests con coverage
-npm run test:coverage
-
-# Tests e2e
-npm run e2e
-
-# Tests en modo watch
-npm run test:watch
 ```
 
-### 📊 Code Quality
-
-```bash
-# Linting
-npm run lint
-npm run lint:fix
-
-# Formateo
-npm run format
-
-# Type checking
-npm run type-check
-
-# Bundle analysis
-npm run analyze
-```
+### Pruebas Validadas:
+- Generación, exportación e importación de claves `AES-256-GCM`.
+- Cifrado y descifrado de mensajes con validación estricta de AAD (detección de salas falsas o manipulación).
+- Acuerdo de claves Diffie-Hellman en curva elíptica (ECDH P-256) y key wrapping/unwrapping.
+- Generación consistente del fingerprint Short Authentication String (SAS).
 
 ---
 
-## 🚀 Deployment
+## 🛠️ Instalación y Desarrollo Local
 
-### 🌐 Netlify (Recomendado)
+### Requisitos
+- Node.js 18+ o 20+
+- npm
 
 ```bash
-# Build para producción
+# 1. Clonar el repositorio
+git clone https://github.com/h3n-x/chat-frontend.git
+cd chat-frontend
+
+# 2. Instalar dependencias limpias
+npm install
+
+# 3. Iniciar servidor de desarrollo con Vite
+npm run dev
+
+# 4. Compilar para producción (typecheck estricto + build)
 npm run build
-npm run export
 
-# Deploy automático via Git
-# Conectar repo en Netlify Dashboard
+# 5. Vista previa del build de producción
+npm run preview
 ```
 
-### ⚙️ Variables de Entorno en Producción
-
-```bash
-NEXT_PUBLIC_WS_URL=wss://tu-backend.com
-NEXT_PUBLIC_API_URL=https://tu-backend.com
+### Variables de Entorno (Opcional)
+Crea un archivo `.env` o `.env.local` si deseas apuntar a un backend personalizado:
+```env
+VITE_API_URL=http://localhost:8000
+VITE_WS_URL=ws://localhost:8000
 ```
 
 ---
 
-## 🔗 Enlaces y Recursos
-
-### 📚 **Documentación**
-- 🏠 [**Documentación Principal**](https://github.com/h3n-x/chat-anonimo)
-- 🚀 [**Backend Repository**](https://github.com/h3n-x/chat-backend)
-- 📖 [**Next.js Docs**](https://nextjs.org/docs)
-- 💨 [**TailwindCSS Docs**](https://tailwindcss.com/docs)
-
-### 🤝 **Contribución**
-- 🐛 [**Issues**](https://github.com/h3n-x/chat-frontend/issues)
-- 💬 [**Discussions**](https://github.com/h3n-x/chat-frontend/discussions)
-- 🔄 [**Pull Requests**](https://github.com/h3n-x/chat-frontend/pulls)
-
-### 🚀 **Deployment**
-- 🌐 [**Frontend Live**](https://write-ghost.netlify.app)
-- 📊 [**Netlify Dashboard**](https://app.netlify.com/sites/write-ghost)
-- 🔍 [**Performance Report**](https://pagespeed.web.dev/analysis/https-write-ghost-netlify-app)
-
-### 🛠️ **Herramientas**
-- 📖 [**Storybook**](http://localhost:6006) (modo dev)
-- 🧪 [**Testing Playground**](https://testing-playground.com)
-- 🎨 [**Tailwind Play**](https://play.tailwindcss.com)
+## ♿ Accesibilidad (WCAG 2.2 AA)
+- Roles ARIA semánticos (`role="log"`, `role="alert"`, `aria-live`).
+- Ratios de contraste de color superiores a 4.5:1 en modo oscuro.
+- Foco visible navegable por teclado en todos los controles interactivos.
 
 ---
 
-<div align="center">
-
-## 🎉 ¡Gracias por usar Chat Anónimo Frontend!
-
-**Interfaz moderna, segura y privada para comunicación anónima**
-
-<p align="center">
-  <a href="https://write-ghost.netlify.app">🌟 <strong>Prueba la Demo</strong></a> •
-  <a href="https://github.com/h3n-x/chat-frontend/issues">🤝 <strong>Contribuir</strong></a> •
-  <a href="https://github.com/h3n-x/chat-anonimo">📖 <strong>Documentación</strong></a>
-</p>
-
----
-
-**Hecho con ❤️ para la privacidad, seguridad y gran experiencia de usuario**
-
-<p align="center">
-  <a href="#-chat-anónimo-frontend">⬆️ Volver al inicio</a>
-</p>
-
-</div>
+## 📜 Licencia
+Distribuido bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
