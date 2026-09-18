@@ -4,12 +4,8 @@
   status = 200
 
 [build]
-  publish = "out"
+  publish = "dist"
   command = "npm run build"
 
 [build.environment]
-  NODE_VERSION = "18"
-
-# Configurar las variables de entorno en la UI de Netlify:
-# NEXT_PUBLIC_WS_URL=wss://tu-backend.com/ws
-# NEXT_PUBLIC_API_URL=https://tu-backend.com
+  NODE_VERSION = "20"
