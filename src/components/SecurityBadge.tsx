@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Copy, Check, Users, KeyRound } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Copy, Check, Users, KeyRound } from 'lucide-react';
 
 interface SecurityBadgeProps {
   fingerprint: string;
   participantCount: number;
+  isSasVerified: boolean;
+  onOpenSasModal: () => void;
 }
 
 export const SecurityBadge: React.FC<SecurityBadgeProps> = ({
   fingerprint,
   participantCount,
+  isSasVerified,
+  onOpenSasModal,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -34,7 +38,7 @@ export const SecurityBadge: React.FC<SecurityBadgeProps> = ({
         <span className="text-neutral-400 hidden sm:inline">Cero-Persistencia</span>
       </div>
 
-      {/* SAS Fingerprint for MITM verification */}
+      {/* SAS Fingerprint & MITM Verification */}
       {fingerprint && (
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 bg-neutral-950 border border-neutral-800 px-2.5 py-1 rounded-md text-neutral-300">
@@ -55,6 +59,32 @@ export const SecurityBadge: React.FC<SecurityBadgeProps> = ({
               )}
             </button>
           </div>
+
+          <button
+            onClick={onOpenSasModal}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-all border ${
+              isSasVerified
+                ? 'bg-emerald-950/40 hover:bg-emerald-900/50 border-emerald-700/60 text-emerald-300'
+                : 'bg-amber-950/50 hover:bg-amber-900/60 border-amber-600/70 text-amber-300 animate-pulse'
+            }`}
+            title={
+              isSasVerified
+                ? 'SAS verificado. Clic para re-verificar.'
+                : 'Verificación SAS pendiente. Clic para comparar y verificar.'
+            }
+          >
+            {isSasVerified ? (
+              <>
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                <span>SAS Verificado</span>
+              </>
+            ) : (
+              <>
+                <ShieldAlert className="w-3 h-3 text-amber-400" />
+                <span>Verificar SAS</span>
+              </>
+            )}
+          </button>
         </div>
       )}
 

@@ -29,7 +29,13 @@ El cliente de Chat Anónimo v2.0 fue reescrito desde cero para erradicar las vul
   $$\text{AAD} = \text{UTF-8}(\text{"room:"} + room\_id)$$
   *Cualquier intento de retransmitir o inyectar un mensaje capturado en otra sala provocará un fallo inmediato en la verificación del tag.*
 - **Acuerdo de Claves Asimétrico:** `ECDH (P-256)` efímero para el intercambio de claves entre clientes cuando se unen mediante código de sala.
-- **Verificación MITM (Fingerprint SAS):** Código de autenticación corto de 4 palabras (Short Authentication String) derivado de `SHA-256(RoomKey)` para verificación visual fuera de banda.
+- **Verificación Anti-MITM Manual (Fingerprint SAS):** Código de autenticación corto de 4 palabras (*Short Authentication String*) derivado de $\text{SHA-256}(\text{RoomKey})$.
+  > [!IMPORTANT]
+  > **La verificación SAS NO es automática:** Ningún navegador ni protocolo criptográfico puede determinar por sí mismo si la clave proviene del interlocutor legítimo o de un atacante activo en el medio (MITM). La seguridad contra MITM depende **estrictamente de que los usuarios comparen estas 4 palabras por un canal fuera de banda** (llamada de voz o en persona).
+  > 
+  > En la interfaz v2.0, la sala presenta un modal interactivo bloqueante (`SasVerificationModal`):
+  > 1. **Coinciden — Activar Chat:** Desbloquea el canal de texto y archivos solo tras la validación humana explícita.
+  > 2. **No Coinciden — Abortar:** Purga de inmediato la clave simétrica de la memoria RAM, cierra la conexión WebSocket y expulsa al usuario de la sala de forma preventiva.
 
 ---
 

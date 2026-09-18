@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { LogOut, Share2, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { LogOut, Share2, Check, AlertCircle, Loader2, KeyRound } from 'lucide-react';
 import { SecurityBadge } from './SecurityBadge';
+import { SasVerificationModal } from './SasVerificationModal';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { ChatMessage, ConnectionStatus } from '../types';
@@ -13,12 +14,17 @@ interface ChatRoomProps {
   status: ConnectionStatus;
   socketError: string | null;
   isHandshaking: boolean;
+  isSasVerified: boolean;
+  isSasModalOpen: boolean;
   identity: { name: string; color: string };
   messages: ChatMessage[];
   onSendMessage: (text: string) => Promise<void>;
   onSendFile: (file: File) => Promise<void>;
   onDownloadFile: (fileId: string, fileName: string, mimeType: string) => Promise<void>;
   onLeave: () => void;
+  onConfirmSasMatch: () => void;
+  onRejectSasMatch: () => void;
+  onOpenSasModal: () => void;
 }
 
 export const ChatRoom: React.FC<ChatRoomProps> = ({
@@ -29,12 +35,17 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   status,
   socketError,
   isHandshaking,
+  isSasVerified,
+  isSasModalOpen,
   identity,
   messages,
   onSendMessage,
   onSendFile,
   onDownloadFile,
   onLeave,
+  onConfirmSasMatch,
+  onRejectSasMatch,
+  onOpenSasModal,
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -105,12 +116,43 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
         </div>
       </header>
 
+      {/* Sas Verification Modal */}
+      <SasVerificationModal
+        fingerprint={fingerprint}
+        isOpen={isSasModalOpen}
+        onConfirmMatch={onConfirmSasMatch}
+        onRejectMatch={onRejectSasMatch}
+      />
+
       {/* Sub-header: Security & Status */}
       <div className="px-4 py-2 shrink-0 space-y-2">
         <SecurityBadge
           fingerprint={fingerprint}
           participantCount={participantCount}
+          isSasVerified={isSasVerified}
+          onOpenSasModal={onOpenSasModal}
         />
+
+        {/* SAS Unverified Warning Banner when peers exist */}
+        {participantCount > 1 && !isSasVerified && (
+          <div
+            role="alert"
+            className="p-2.5 bg-amber-950/60 border border-amber-600/70 rounded-xl text-xs text-amber-200 flex items-center justify-between gap-3 shadow-md"
+          >
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
+              <span>
+                <strong>Verificación Anti-MITM requerida:</strong> Compara el código SAS de 4 palabras con tu interlocutor antes de comenzar a escribir.
+              </span>
+            </div>
+            <button
+              onClick={onOpenSasModal}
+              className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs shrink-0 transition-colors"
+            >
+              Verificar Código
+            </button>
+          </div>
+        )}
 
         {/* Error Alert */}
         {socketError && (
@@ -148,7 +190,12 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
       <MessageInput
         onSendMessage={onSendMessage}
         onSendFile={onSendFile}
-        disabled={status !== 'connected' || isHandshaking || !fingerprint}
+        disabled={
+          status !== 'connected' ||
+          isHandshaking ||
+          !fingerprint ||
+          (!isSasVerified && participantCount > 1)
+        }
       />
     </div>
   );

@@ -42,6 +42,9 @@ export function useCryptoChat() {
   const [identity] = useState(getRandomIdentity);
   const [isHandshaking, setIsHandshaking] = useState<boolean>(false);
   const [handshakeError, setHandshakeError] = useState<string | null>(null);
+  const [isSasVerified, setIsSasVerified] = useState<boolean>(false);
+  const [isSasModalOpen, setIsSasModalOpen] = useState<boolean>(false);
+  const hasAutoOpenedSasRef = useRef<boolean>(false);
 
   // In-memory ECDH handshake state
   const handshakeRef = useRef<ECDHKeyPair | null>(null);
@@ -377,6 +380,14 @@ export function useCryptoChat() {
     [roomKey, roomId]
   );
 
+  // Auto-prompt SAS verification modal when peer joins and SAS is unverified
+  useEffect(() => {
+    if (participantCount > 1 && fingerprint && !isSasVerified && !hasAutoOpenedSasRef.current) {
+      hasAutoOpenedSasRef.current = true;
+      setIsSasModalOpen(true);
+    }
+  }, [participantCount, fingerprint, isSasVerified]);
+
   // Action: Leave Room
   const leaveRoom = useCallback(() => {
     setRoomId('');
@@ -385,7 +396,28 @@ export function useCryptoChat() {
     setFingerprint('');
     setMessages([]);
     setIsHandshaking(false);
+    setIsSasVerified(false);
+    setIsSasModalOpen(false);
+    hasAutoOpenedSasRef.current = false;
     window.location.hash = '';
+  }, []);
+
+  // Action: Confirm SAS match (unblocks chatting)
+  const confirmSasMatch = useCallback(() => {
+    setIsSasVerified(true);
+    setIsSasModalOpen(false);
+  }, []);
+
+  // Action: Reject SAS match (potential MITM -> immediate abort)
+  const rejectSasMatch = useCallback(() => {
+    setIsSasVerified(false);
+    setIsSasModalOpen(false);
+    leaveRoom();
+  }, [leaveRoom]);
+
+  // Action: Open SAS Modal manually
+  const openSasModal = useCallback(() => {
+    setIsSasModalOpen(true);
   }, []);
 
   return {
@@ -399,6 +431,11 @@ export function useCryptoChat() {
     participantCount,
     socketError: socketError || handshakeError,
     isHandshaking,
+    isSasVerified,
+    isSasModalOpen,
+    confirmSasMatch,
+    rejectSasMatch,
+    openSasModal,
     createRoom,
     joinWithKey,
     joinWithCodeOnly,
@@ -408,3 +445,4 @@ export function useCryptoChat() {
     leaveRoom,
   };
 }
+

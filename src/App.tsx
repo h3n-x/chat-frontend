@@ -18,6 +18,11 @@ export const App: React.FC = () => {
     isHandshaking,
     identity,
     messages,
+    isSasVerified,
+    isSasModalOpen,
+    confirmSasMatch,
+    rejectSasMatch,
+    openSasModal,
     createRoom,
     joinWithKey,
     joinWithCodeOnly,
@@ -81,12 +86,17 @@ export const App: React.FC = () => {
           status={status}
           socketError={socketError}
           isHandshaking={isHandshaking}
+          isSasVerified={isSasVerified}
+          isSasModalOpen={isSasModalOpen}
           identity={identity}
           messages={messages}
           onSendMessage={sendMessage}
           onSendFile={sendEncryptedFile}
           onDownloadFile={downloadAndDecryptFile}
           onLeave={leaveRoom}
+          onConfirmSasMatch={confirmSasMatch}
+          onRejectSasMatch={rejectSasMatch}
+          onOpenSasModal={openSasModal}
         />
       )}
     </div>
