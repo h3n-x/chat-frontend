@@ -72,7 +72,7 @@ export const SasVerificationModal: React.FC<SasVerificationModalProps> = ({
             </button>
           </div>
           <p className="mt-2 text-[11px] text-neutral-400">
-            Si ambos ven exactamente las mismas palabras, está garantizado matemáticamente que ningún intermediario está interviniendo la sesión.
+            Si ambos ven exactamente las mismas palabras, confirma que ambos extremos comparten la misma clave de sesión y no hay un intermediario activo interceptando el intercambio.
           </p>
         </div>
 

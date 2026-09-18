@@ -65,6 +65,17 @@ El cliente de Chat Anónimo v2.0 fue reescrito desde cero para erradicar las vul
 
 ---
 
+## ⚠️ Límites del Modelo de Amenazas en el Cliente
+
+> [!CAUTION]
+> El cifrado de extremo a extremo en el navegador protege contra intermediarios de red y servidores curiosos, pero **no puede proteger contra las siguientes condiciones**:
+> 1. **Malware o extensiones maliciosas:** Cualquier extensión instalada en el navegador con acceso a la pestaña o software espía a nivel del sistema operativo puede leer las variables de estado en memoria o el DOM renderizado.
+> 2. **Omisión de la verificación SAS:** Si los usuarios no comparan de viva voz o presencialmente el código de 4 palabras del modal bloqueante, no existe garantía contra un intermediario activo en la red (MITM) que suplante las claves públicas ECDH.
+> 3. **Compartición insegura de enlaces:** Transmitir el enlace directo `#room=...&key=...` por canales inseguros (SMS, correo sin cifrar) expone la clave de la sala.
+> 4. **Fuga por memoria local prolongada:** Las claves viven en la memoria RAM del navegador mientras la pestaña permanezca abierta; cerrar o salir de la sala purga el estado.
+
+---
+
 ## 📁 Transferencia Segura de Archivos
 
 1. **Cifrado en Memoria:** El archivo se lee como `ArrayBuffer`, se empaqueta con su nombre original y tipo MIME, y se cifra con `AES-256-GCM` antes de enviarse.
