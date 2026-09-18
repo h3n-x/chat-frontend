@@ -16,6 +16,13 @@ export interface DecryptedMessagePlaintext {
   voice_effect?: 'natural' | 'robot' | 'radio' | 'deep';
   is_decoy?: boolean; // Chaffing traffic frame to neutralize timing analysis
   is_remote_nuke?: boolean; // Collective killswitch signal
+  is_view_once?: boolean; // Ephemeral view-once media
+  is_stego?: boolean; // Steganographic carrier image
+  stego_hidden_text?: string;
+  is_reaction_signal?: boolean;
+  target_message_id?: string;
+  reaction_emoji?: string;
+  reactions?: Record<string, string[]>; // { "👍": ["User1", "User2"] }
   file?: {
     file_id: string;
     file_name: string;
@@ -29,6 +36,7 @@ export interface ChatMessage extends DecryptedMessagePlaintext {
   is_self: boolean;
   is_system?: boolean;
   corrupted?: boolean;
+  viewed?: boolean; // Has ephemeral view-once media been opened and expired
   file_blob_url?: string;
   file_downloading?: boolean;
   audio_blob_url?: string;

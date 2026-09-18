@@ -1,14 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { Send, Paperclip, Loader2, AlertCircle, Mic, Flame } from 'lucide-react';
+import { Send, Paperclip, Loader2, AlertCircle, Mic, Flame, Eye, Image as ImageIcon } from 'lucide-react';
 import { MAX_MESSAGE_LENGTH, MAX_FILE_SIZE_BYTES } from '../config';
 import { VoiceRecorder } from './VoiceRecorder';
 import { VoiceEffect } from '../utils/voiceScrambler';
 
 interface MessageInputProps {
   onSendMessage: (text: string, burnTtl?: number) => Promise<void>;
-  onSendFile: (file: File) => Promise<void>;
+  onSendFile: (file: File, isViewOnce?: boolean) => Promise<void>;
   onSendAudio: (blob: Blob, durationSec: number, effect?: VoiceEffect) => Promise<void>;
   onTyping: (isTyping: boolean) => void;
+  onOpenSteganography?: () => void;
+  onDuress?: () => void;
   disabled: boolean;
 }
 
@@ -25,6 +27,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onSendFile,
   onSendAudio,
   onTyping,
+  onOpenSteganography,
+  onDuress,
   disabled,
 }) => {
   const [text, setText] = useState('');
@@ -32,6 +36,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [fileUploading, setFileUploading] = useState(false);
   const [inputError, setInputError] = useState<string | null>(null);
   const [burnIndex, setBurnIndex] = useState<number>(0);
+  const [isViewOnce, setIsViewOnce] = useState<boolean>(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +50,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!text.trim() || sending || disabled) return;
+
+    // Check for Duress emergency code
+    if (text.trim().toLowerCase() === '/duress' || text.trim() === '9999') {
+      if (onDuress) {
+        setText('');
+        onDuress();
+        return;
+      }
+    }
 
     setSending(true);
     setInputError(null);
@@ -89,7 +103,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     setFileUploading(true);
     setInputError(null);
     try {
-      await onSendFile(file);
+      await onSendFile(file, isViewOnce);
+      setIsViewOnce(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al subir archivo';
       setInputError(msg);
@@ -152,6 +167,43 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               <Paperclip className="w-5 h-5" />
             )}
           </label>
+
+          {/* Steganography LSB Button */}
+          {onOpenSteganography && (
+            <button
+              type="button"
+              onClick={onOpenSteganography}
+              disabled={disabled || fileUploading || sending}
+              className={`p-2.5 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 text-neutral-400 hover:text-indigo-400 transition-colors shrink-0 flex items-center justify-center ${
+                disabled ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              title="Esteganografía: Ocultar texto confidencial dentro de una imagen portadora"
+              aria-label="Esteganografía LSB"
+            >
+              <ImageIcon className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* View-Once Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsViewOnce((prev) => !prev)}
+            disabled={disabled || fileUploading || sending}
+            className={`px-2 py-2.5 rounded-xl border text-xs font-semibold transition-all shrink-0 flex items-center gap-1 ${
+              isViewOnce
+                ? 'bg-amber-950/80 border-amber-500/80 text-amber-400 shadow-sm'
+                : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200'
+            }`}
+            title={
+              isViewOnce
+                ? 'Modo Ver 1 sola vez ACTIVO: El próximo archivo adjunto se destruirá permanentemente tras 7s'
+                : 'Activar Ver 1 sola vez: El archivo adjunto se destruye permanentemente tras abrirse'
+            }
+            aria-label="Alternar Ver 1 sola vez"
+          >
+            <Eye className={`w-4 h-4 ${isViewOnce ? 'animate-pulse text-amber-400' : 'text-neutral-500'}`} />
+            <span>1x</span>
+          </button>
 
           {/* Voice Note Button */}
           <button

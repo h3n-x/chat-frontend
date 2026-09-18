@@ -1,26 +1,33 @@
 import React, { useState } from 'react';
-import { ShieldCheck, ShieldAlert, Copy, Check, Users, KeyRound } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Copy, Check, Users, KeyRound, Activity, Globe } from 'lucide-react';
+import { copyWithAutoScrub } from '../utils/secureClipboard';
 
 interface SecurityBadgeProps {
   fingerprint: string;
   participantCount: number;
   isSasVerified: boolean;
+  rttMs?: number | null;
   onOpenSasModal: () => void;
+  onOpenTorSettings?: () => void;
 }
 
 export const SecurityBadge: React.FC<SecurityBadgeProps> = ({
   fingerprint,
   participantCount,
   isSasVerified,
+  rttMs,
   onOpenSasModal,
+  onOpenTorSettings,
 }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!fingerprint) return;
-    navigator.clipboard.writeText(fingerprint);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const ok = await copyWithAutoScrub(fingerprint, 30);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -88,12 +95,56 @@ export const SecurityBadge: React.FC<SecurityBadgeProps> = ({
         </div>
       )}
 
-      {/* Live Peer Count */}
-      <div className="flex items-center gap-1.5 text-neutral-400 bg-neutral-950/60 px-2 py-1 rounded-md border border-neutral-800/80">
-        <Users className="w-3.5 h-3.5 text-neutral-400" aria-hidden="true" />
-        <span>
-          {participantCount} {participantCount === 1 ? 'participante' : 'participantes'}
-        </span>
+      {/* Right Stats: RTT Latency, Tor Proxy, and Peer Count */}
+      <div className="flex items-center gap-2">
+        {/* RTT Ping Latency */}
+        {rttMs !== undefined && rttMs !== null && (
+          <div
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-neutral-950/60 border border-neutral-800/80 text-[11px]"
+            title={`Latencia RTT con el Blind Relay: ${rttMs} ms`}
+          >
+            <Activity
+              className={`w-3 h-3 ${
+                rttMs < 120
+                  ? 'text-emerald-400'
+                  : rttMs < 300
+                  ? 'text-amber-400'
+                  : 'text-red-400'
+              }`}
+            />
+            <span
+              className={`font-mono ${
+                rttMs < 120
+                  ? 'text-emerald-300'
+                  : rttMs < 300
+                  ? 'text-amber-300'
+                  : 'text-red-300'
+              }`}
+            >
+              {rttMs} ms
+            </span>
+          </div>
+        )}
+
+        {/* Tor / Proxy Settings */}
+        {onOpenTorSettings && (
+          <button
+            onClick={onOpenTorSettings}
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-neutral-950/60 hover:bg-neutral-800/80 border border-neutral-800/80 text-neutral-400 hover:text-purple-300 text-[11px] transition-colors"
+            title="Configuración de Red Tor & Blind Relay"
+          >
+            <Globe className="w-3 h-3 text-purple-400" />
+            <span className="hidden md:inline">Tor/Relay</span>
+          </button>
+        )}
+
+        {/* Live Peer Count */}
+        <div className="flex items-center gap-1.5 text-neutral-400 bg-neutral-950/60 px-2 py-1 rounded-md border border-neutral-800/80">
+          <Users className="w-3.5 h-3.5 text-neutral-400" aria-hidden="true" />
+          <span>
+            {participantCount} {participantCount === 1 ? 'participante' : 'participantes'}
+          </span>
+        </div>
       </div>
     </section>
   );

@@ -11,6 +11,8 @@ import {
   Eye,
   EyeOff,
   Radio,
+  Search,
+  X,
 } from 'lucide-react';
 import { SecurityBadge } from './SecurityBadge';
 import { SasVerificationModal } from './SasVerificationModal';
@@ -20,6 +22,9 @@ import { QrCodeModal } from './QrCodeModal';
 import { ImageLightboxModal } from './ImageLightboxModal';
 import { PanicOverlay } from './PanicOverlay';
 import { NukeModal } from './NukeModal';
+import { ViewOnceModal } from './ViewOnceModal';
+import { SteganographyModal } from './SteganographyModal';
+import { TorSettingsModal } from './TorSettingsModal';
 import { isSoundMuted, toggleSoundMuted } from '../utils/audio';
 import { VoiceEffect } from '../utils/voiceScrambler';
 import { ChatMessage, ConnectionStatus } from '../types';
@@ -36,16 +41,21 @@ interface ChatRoomProps {
   isSasModalOpen: boolean;
   isPeerTyping: boolean;
   isDecoyTrafficActive: boolean;
+  rttMs?: number | null;
   identity: { name: string; color: string };
   messages: ChatMessage[];
   onSendMessage: (text: string, burnTtl?: number) => Promise<void>;
-  onSendFile: (file: File) => Promise<void>;
+  onSendFile: (file: File, isViewOnce?: boolean) => Promise<void>;
   onSendAudio: (blob: Blob, durationSec: number, effect?: VoiceEffect) => Promise<void>;
   onDownloadFile: (fileId: string, fileName: string, mimeType: string) => Promise<void>;
   onLoadMedia: (fileId: string, mimeType: string, messageId: string) => Promise<void>;
   onPurgeMessage: (id: string) => void;
   onTyping: (isTyping: boolean) => void;
   onToggleDecoyTraffic: () => void;
+  onReact: (messageId: string, emoji: string) => void;
+  onBurnViewOnce: (messageId: string) => void;
+  onSendStegoImage: (stegoBlob: Blob, previewUrl: string, secretText: string) => Promise<void>;
+  onDuress: () => void;
   onLeave: () => void;
   onNuke: () => void;
   onRemoteNuke: () => Promise<void>;
@@ -66,6 +76,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   isSasModalOpen,
   isPeerTyping,
   isDecoyTrafficActive,
+  rttMs,
   identity,
   messages,
   onSendMessage,
@@ -76,6 +87,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   onPurgeMessage,
   onTyping,
   onToggleDecoyTraffic,
+  onReact,
+  onBurnViewOnce,
+  onSendStegoImage,
+  onDuress,
   onLeave,
   onNuke,
   onRemoteNuke,
@@ -87,6 +102,11 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   const [isMuted, setIsMuted] = useState(isSoundMuted());
   const [isBlurred, setIsBlurred] = useState(false);
   const [isNukeModalOpen, setIsNukeModalOpen] = useState(false);
+  const [isStegoOpen, setIsStegoOpen] = useState(false);
+  const [isTorSettingsOpen, setIsTorSettingsOpen] = useState(false);
+  const [viewOnceData, setViewOnceData] = useState<{ url: string; mime: string; messageId: string } | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null);
 
   // Esc x 3 Panic shortcut detector
@@ -95,6 +115,20 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Duress hotkey: Ctrl + Shift + D
+      if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault();
+        onDuress();
+        return;
+      }
+
+      // Search hotkey: Ctrl + F
+      if (e.ctrlKey && (e.key === 'F' || e.key === 'f')) {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+        return;
+      }
+
       if (e.key === 'Escape') {
         escCountRef.current += 1;
         if (escTimerRef.current) clearTimeout(escTimerRef.current);
@@ -166,6 +200,16 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
     });
   };
 
+  const displayMessages = searchQuery.trim()
+    ? messages.filter(
+        (m) =>
+          m.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          m.file?.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (m.stego_hidden_text &&
+            m.stego_hidden_text.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : messages;
+
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
@@ -180,6 +224,34 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
         onClose={() => setIsQrOpen(false)}
         inviteUrl={shareUrl}
         roomId={roomId}
+        roomKeyBase64={roomKeyBase64}
+      />
+
+      {/* Steganography LSB Modal */}
+      <SteganographyModal
+        isOpen={isStegoOpen}
+        onClose={() => setIsStegoOpen(false)}
+        onSendStegoImage={onSendStegoImage}
+      />
+
+      {/* View-Once Ephemeral Modal */}
+      <ViewOnceModal
+        isOpen={!!viewOnceData}
+        mediaUrl={viewOnceData?.url || ''}
+        mimeType={viewOnceData?.mime || ''}
+        onClose={() => setViewOnceData(null)}
+        onPermanentBurn={() => {
+          if (viewOnceData) {
+            onBurnViewOnce(viewOnceData.messageId);
+            setViewOnceData(null);
+          }
+        }}
+      />
+
+      {/* Tor & Onion Proxy Settings Modal */}
+      <TorSettingsModal
+        isOpen={isTorSettingsOpen}
+        onClose={() => setIsTorSettingsOpen(false)}
       />
 
       {/* In-Memory Lightbox Viewer */}
@@ -235,13 +307,28 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
             <button
               onClick={() => setIsQrOpen(true)}
               className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors flex items-center gap-1 text-xs font-semibold"
-              title="Mostrar Código QR para móvil"
+              title="Mostrar Código QR / Frase BIP-39"
               aria-label="Código QR"
             >
               <QrCode className="w-4 h-4 text-emerald-400" />
-              <span className="hidden md:inline">QR</span>
+              <span className="hidden md:inline">Acceso</span>
             </button>
           )}
+
+          {/* Search in RAM Button */}
+          <button
+            onClick={() => setIsSearchOpen((prev) => !prev)}
+            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all flex items-center gap-1 text-xs font-semibold ${
+              isSearchOpen || searchQuery
+                ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-400 shadow-sm'
+                : 'bg-neutral-800 hover:bg-neutral-750 border-transparent text-neutral-400 hover:text-white'
+            }`}
+            title="Buscar en memoria RAM (Ctrl + F)"
+            aria-label="Buscar mensajes"
+          >
+            <Search className="w-4 h-4" />
+            <span className="hidden md:inline">Buscar</span>
+          </button>
 
           {/* Spy Mode / Hold to Reveal Toggle */}
           <button
@@ -323,13 +410,44 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
         </div>
       </header>
 
+      {/* In-RAM Search Filter Bar */}
+      {isSearchOpen && (
+        <div className="px-4 py-2 bg-neutral-900 border-b border-neutral-800 flex items-center gap-2 animate-fade-in">
+          <Search className="w-4 h-4 text-emerald-400 shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar palabras o archivos en memoria RAM (Ctrl + F)..."
+            autoFocus
+            className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-neutral-100 placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+          />
+          {searchQuery && (
+            <span className="text-[11px] text-emerald-400 font-mono">
+              {displayMessages.length} resultado{displayMessages.length === 1 ? '' : 's'}
+            </span>
+          )}
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setIsSearchOpen(false);
+            }}
+            className="p-1 rounded-lg text-neutral-400 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Sub-header: Security & Status */}
       <div className="px-4 py-2 shrink-0 space-y-2">
         <SecurityBadge
           fingerprint={fingerprint}
           participantCount={participantCount}
           isSasVerified={isSasVerified}
+          rttMs={rttMs}
           onOpenSasModal={onOpenSasModal}
+          onOpenTorSettings={() => setIsTorSettingsOpen(true)}
         />
 
         {/* SAS Unverified Warning Banner when peers exist */}
@@ -392,11 +510,14 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
 
       {/* Message Feed */}
       <MessageList
-        messages={messages}
+        messages={displayMessages}
         onDownloadFile={onDownloadFile}
         onPurgeMessage={onPurgeMessage}
         onLoadMedia={onLoadMedia}
         onOpenLightbox={(url, name) => setLightboxImage({ url, name })}
+        onReact={onReact}
+        onOpenViewOnce={(url, mime, id) => setViewOnceData({ url, mime, messageId: id })}
+        searchQuery={searchQuery}
         isPeerTyping={isPeerTyping}
         isSpyMode={isSpyMode}
       />
@@ -407,6 +528,8 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
         onSendFile={onSendFile}
         onSendAudio={onSendAudio}
         onTyping={onTyping}
+        onOpenSteganography={() => setIsStegoOpen(true)}
+        onDuress={onDuress}
         disabled={
           status !== 'connected' ||
           isHandshaking ||

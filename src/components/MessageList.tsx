@@ -7,10 +7,12 @@ import {
   Loader2,
   Maximize2,
   Eye,
+  Flame,
 } from 'lucide-react';
 import { ChatMessage } from '../types';
 import { FileAttachment } from './FileAttachment';
 import { BurnCountdown } from './BurnCountdown';
+import { copyWithAutoScrub } from '../utils/secureClipboard';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -18,8 +20,29 @@ interface MessageListProps {
   onPurgeMessage: (id: string) => void;
   onLoadMedia: (fileId: string, mimeType: string, messageId: string) => Promise<void>;
   onOpenLightbox: (imageUrl: string, imageName: string) => void;
+  onReact?: (messageId: string, emoji: string) => void;
+  onOpenViewOnce?: (mediaUrl: string, mimeType: string, messageId: string) => void;
+  searchQuery?: string;
   isPeerTyping?: boolean;
   isSpyMode?: boolean;
+}
+
+const REACTION_EMOJIS = ['👍', '❤️', '🔥', '🤫', '👁️'];
+
+function highlightText(text: string, query?: string): React.ReactNode {
+  if (!query || !query.trim()) return text;
+  const q = query.trim();
+  const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i} className="bg-amber-400 text-neutral-950 font-bold px-0.5 rounded">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
 }
 
 function formatTime(timestamp: number): string {
@@ -33,6 +56,9 @@ export const MessageList: React.FC<MessageListProps> = ({
   onPurgeMessage,
   onLoadMedia,
   onOpenLightbox,
+  onReact,
+  onOpenViewOnce,
+  searchQuery,
   isPeerTyping = false,
   isSpyMode = false,
 }) => {
@@ -105,7 +131,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         return (
           <div
             key={msg.id}
-            className={`flex flex-col ${msg.is_self ? 'items-end' : 'items-start'}`}
+            className={`flex flex-col group relative ${msg.is_self ? 'items-end' : 'items-start'}`}
           >
             {/* Sender, Time & Burn Countdown */}
             <div className="flex items-center gap-2 mb-1 px-1">
@@ -118,6 +144,23 @@ export const MessageList: React.FC<MessageListProps> = ({
               <span className="text-[10px] text-neutral-500">
                 {formatTime(msg.timestamp)}
               </span>
+
+              {/* Quick Reactions Bar on Hover */}
+              {onReact && (
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ml-1 bg-neutral-900/90 border border-neutral-800 rounded-full px-1.5 py-0.5 shadow-sm">
+                  {REACTION_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => onReact(msg.id, emoji)}
+                      className="text-[11px] hover:scale-125 transition-transform px-0.5"
+                      title={`Reaccionar con ${emoji}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {msg.burn_expires_at && (
                 <BurnCountdown
                   expiresAt={msg.burn_expires_at}
@@ -146,9 +189,69 @@ export const MessageList: React.FC<MessageListProps> = ({
                   transition: 'filter 0.15s ease-out',
                 }}
               >
-                {/* Message text */}
+                {/* Message text with Search Highlighting */}
                 {(!msg.is_audio || msg.text !== '🎤 Nota de voz cifrada') && (
-                  <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                  <p className="whitespace-pre-wrap break-words">
+                    {highlightText(msg.text, searchQuery)}
+                  </p>
+                )}
+
+                {/* View-Once Ephemeral Media Card */}
+                {msg.is_view_once && (
+                  <div className="mt-2 pt-1 border-t border-neutral-800/60">
+                    {msg.viewed ? (
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-neutral-950/80 border border-neutral-800 text-neutral-500 text-xs">
+                        <Flame className="w-4 h-4 text-neutral-600" />
+                        <span>Contenido efímero ver una sola vez destruido permanentemente</span>
+                      </div>
+                    ) : msg.is_self ? (
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-950/40 border border-amber-600/40 text-amber-300 text-xs">
+                        <Eye className="w-4 h-4 text-amber-400" />
+                        <span>Foto efímera enviada (el receptor solo podrá verla 1 vez durante 7s)</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          if (!msg.file_blob_url && msg.file) {
+                            await onLoadMedia(msg.file.file_id, msg.file.mime_type, msg.id);
+                          }
+                          if (onOpenViewOnce && msg.file) {
+                            onOpenViewOnce(msg.file_blob_url || '', msg.file.mime_type, msg.id);
+                          }
+                        }}
+                        disabled={msg.file_downloading}
+                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/70 text-amber-300 font-bold text-xs transition-colors shadow-sm"
+                      >
+                        {msg.file_downloading ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                        ) : (
+                          <Eye className="w-4 h-4 text-amber-400 animate-pulse" />
+                        )}
+                        <span>👁️ Ver foto efímera (1 sola vez · 7s)</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Steganographic Revealed Payload */}
+                {msg.is_stego && msg.stego_hidden_text && (
+                  <div className="mt-2 p-2.5 bg-indigo-950/60 border border-indigo-500/50 rounded-xl text-xs flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-indigo-300">
+                      <span className="flex items-center gap-1">
+                        <Eye className="w-3.5 h-3.5 text-indigo-400" /> Mensaje Esteganográfico Oculto (LSB):
+                      </span>
+                      <button
+                        onClick={() => copyWithAutoScrub(msg.stego_hidden_text || '', 30)}
+                        className="text-[10px] px-2 py-0.5 rounded bg-neutral-900 hover:bg-neutral-800 text-indigo-300 transition-colors"
+                        title="Copiar texto secreto (auto-scrub 30s)"
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                    <p className="font-mono text-indigo-100 bg-neutral-950/80 p-2 rounded-lg break-words select-text">
+                      {msg.stego_hidden_text}
+                    </p>
+                  </div>
                 )}
 
                 {/* In-Memory Audio Voice Player */}
@@ -196,8 +299,8 @@ export const MessageList: React.FC<MessageListProps> = ({
                   </div>
                 )}
 
-                {/* In-Memory Image Thumbnail Preview */}
-                {isImage && (
+                {/* In-Memory Image Thumbnail Preview (Disabled for View-Once) */}
+                {isImage && !msg.is_view_once && (
                   <div className="mt-2.5">
                     {msg.file_blob_url ? (
                       <div className="relative group rounded-xl overflow-hidden border border-neutral-800 bg-neutral-950 max-w-xs cursor-pointer shadow-inner">
@@ -237,8 +340,8 @@ export const MessageList: React.FC<MessageListProps> = ({
                   </div>
                 )}
 
-                {/* Regular File Download (Non-image / Non-voice) */}
-                {msg.file && !isImage && !msg.is_audio && (
+                {/* Regular File Download (Non-image / Non-voice / Non-view-once) */}
+                {msg.file && !isImage && !msg.is_audio && !msg.is_view_once && (
                   <FileAttachment
                     fileId={msg.file.file_id}
                     fileName={msg.file.file_name}
@@ -265,6 +368,23 @@ export const MessageList: React.FC<MessageListProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Aggregated Reaction Badges */}
+            {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1 px-1">
+                {Object.entries(msg.reactions).map(([emoji, users]) => (
+                  <button
+                    key={emoji}
+                    onClick={() => onReact && onReact(msg.id, emoji)}
+                    className="px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 hover:border-emerald-500/70 text-xs flex items-center gap-1 transition-all shadow-xs"
+                    title={`Reaccionado por: ${users.join(', ')}`}
+                  >
+                    <span>{emoji}</span>
+                    <span className="text-[10px] text-neutral-300 font-bold">{users.length}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}

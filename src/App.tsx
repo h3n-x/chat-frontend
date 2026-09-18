@@ -4,9 +4,11 @@ import { useCryptoChat } from './hooks/useCryptoChat';
 import { FailClosedBanner } from './components/FailClosedBanner';
 import { RoomJoin } from './components/RoomJoin';
 import { ChatRoom } from './components/ChatRoom';
+import { DecoyRoom } from './components/DecoyRoom';
 
 export const App: React.FC = () => {
   const [cryptoSupported, setCryptoSupported] = useState<boolean>(true);
+  const [isDuressActive, setIsDuressActive] = useState<boolean>(false);
 
   const {
     roomId,
@@ -39,6 +41,10 @@ export const App: React.FC = () => {
     remoteNukeRoom,
     isDecoyTrafficActive,
     toggleDecoyTraffic,
+    rttMs,
+    sendReaction,
+    burnViewOnceMessage,
+    sendEncryptedStegoImage,
   } = useCryptoChat();
 
   // Check WebCrypto support on initial mount
@@ -70,9 +76,20 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', parseHash);
   }, [joinWithKey]);
 
+  const handleTriggerDuress = () => {
+    if (roomId) {
+      nukeRoom();
+    }
+    setIsDuressActive(true);
+  };
+
   // Fail-Closed: halt execution completely if WebCrypto is unavailable
   if (!cryptoSupported) {
     return <FailClosedBanner />;
+  }
+
+  if (isDuressActive) {
+    return <DecoyRoom onExitDecoy={() => setIsDuressActive(false)} />;
   }
 
   return (
@@ -85,6 +102,8 @@ export const App: React.FC = () => {
           onJoinByCode={async (code) => {
             await joinWithCodeOnly(code);
           }}
+          onJoinWithKey={joinWithKey}
+          onDuress={handleTriggerDuress}
         />
       ) : (
         <ChatRoom
@@ -109,6 +128,11 @@ export const App: React.FC = () => {
           onTyping={sendTypingSignal}
           onToggleDecoyTraffic={toggleDecoyTraffic}
           isDecoyTrafficActive={isDecoyTrafficActive}
+          rttMs={rttMs}
+          onReact={sendReaction}
+          onBurnViewOnce={burnViewOnceMessage}
+          onSendStegoImage={sendEncryptedStegoImage}
+          onDuress={handleTriggerDuress}
           onLeave={leaveRoom}
           onNuke={nukeRoom}
           onRemoteNuke={remoteNukeRoom}

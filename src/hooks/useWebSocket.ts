@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { WS_BASE_URL } from '../config';
 import { ConnectionStatus, WSInboundFrame } from '../types';
+import { getCustomRelayUrl } from '../utils/torDetection';
 
 interface UseWebSocketOptions {
   roomId: string;
@@ -12,9 +13,11 @@ export function useWebSocket({ roomId, onMessage, enabled }: UseWebSocketOptions
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [participantCount, setParticipantCount] = useState<number>(1);
   const [socketError, setSocketError] = useState<string | null>(null);
+  const [rttMs, setRttMs] = useState<number | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
+  const lastPingTimeRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const retryCountRef = useRef<number>(0);
   const intentionalCloseRef = useRef<boolean>(false);
@@ -58,8 +61,11 @@ export function useWebSocket({ roomId, onMessage, enabled }: UseWebSocketOptions
       setStatus('connecting');
     }
     setSocketError(null);
+    intentionalCloseRef.current = false;
 
-    const wsUrl = `${WS_BASE_URL}/ws/${roomId}`;
+    const customRelay = getCustomRelayUrl();
+    const baseWs = customRelay ? customRelay.replace(/\/+$/, '') : WS_BASE_URL;
+    const wsUrl = `${baseWs}/ws/${roomId}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -67,19 +73,28 @@ export function useWebSocket({ roomId, onMessage, enabled }: UseWebSocketOptions
       setStatus('connected');
       retryCountRef.current = 0;
 
-      // Keepalive ping every 25 seconds
+      // Keepalive ping every 20 seconds and initial ping
       pingIntervalRef.current = window.setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
+          lastPingTimeRef.current = Date.now();
           ws.send(JSON.stringify({ type: 'ping' }));
         }
-      }, 25000);
+      }, 20000);
+
+      lastPingTimeRef.current = Date.now();
+      ws.send(JSON.stringify({ type: 'ping' }));
     };
 
     ws.onmessage = (event: MessageEvent) => {
       try {
         const frame = JSON.parse(event.data) as WSInboundFrame;
 
-        if (frame.type === 'room_welcome') {
+        if (frame.type === 'pong') {
+          if (lastPingTimeRef.current) {
+            setRttMs(Math.max(1, Date.now() - lastPingTimeRef.current));
+            lastPingTimeRef.current = null;
+          }
+        } else if (frame.type === 'room_welcome') {
           setParticipantCount(frame.participant_count);
         } else if (frame.type === 'peer_joined') {
           setParticipantCount(frame.participant_count);
@@ -104,11 +119,12 @@ export function useWebSocket({ roomId, onMessage, enabled }: UseWebSocketOptions
         clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = null;
       }
+      setRttMs(null);
 
       if (event.code === 1008) {
         setStatus('error');
         setSocketError(
-          event.reason || 'Conexión rechazada por política del servidor (límite alcanzado o sala llena).'
+          event.reason || 'Conexión rechazada por políticas de seguridad del relay.'
         );
         return;
       }
@@ -118,19 +134,15 @@ export function useWebSocket({ roomId, onMessage, enabled }: UseWebSocketOptions
         return;
       }
 
-      // Exponential backoff retry (1s, 2s, 4s, 8s, max 12s)
+      // Exponential backoff reconnect
       setStatus('reconnecting');
-      const delay = Math.min(1000 * Math.pow(1.5, retryCountRef.current), 12000);
+      const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
       retryCountRef.current += 1;
-
-      reconnectTimeoutRef.current = window.setTimeout(() => {
-        connect();
-      }, delay);
+      reconnectTimeoutRef.current = window.setTimeout(connect, delay);
     };
   }, [enabled, roomId]);
 
   useEffect(() => {
-    intentionalCloseRef.current = false;
     connect();
 
     return () => {
@@ -151,6 +163,7 @@ export function useWebSocket({ roomId, onMessage, enabled }: UseWebSocketOptions
     status,
     participantCount,
     socketError,
+    rttMs,
     sendFrame,
     disconnect,
   };

@@ -31,6 +31,7 @@ import {
 } from '../utils/audio';
 import { stripImageMetadata, generateAnonymousFilename } from '../utils/fileSanitizer';
 import { VoiceEffect } from '../utils/voiceScrambler';
+import { notifyNewEncryptedMessage } from '../utils/notifications';
 
 const ANONYMOUS_ADJECTIVES = ['Sombra', 'Fantasma', 'Cripto', 'Espectro', 'Sigilo', 'Silencio', 'Vórtice'];
 const ACCENT_COLORS = ['#10B981', '#06B6D4', '#8B5CF6', '#F59E0B', '#EC4899', '#3B82F6'];
@@ -111,7 +112,36 @@ export function useCryptoChat() {
             return;
           }
 
+          // 1.3 Reaction Signal frame received (update reactions without adding bubble)
+          if (plaintext.is_reaction_signal && plaintext.target_message_id && plaintext.reaction_emoji) {
+            const targetId = plaintext.target_message_id;
+            const emoji = plaintext.reaction_emoji;
+            const sender = plaintext.sender_name;
+
+            setMessages((prev) =>
+              prev.map((msg) => {
+                if (msg.id !== targetId) return msg;
+                const existing = { ...(msg.reactions || {}) };
+                const users = [...(existing[emoji] || [])];
+                const idx = users.indexOf(sender);
+                if (idx >= 0) {
+                  users.splice(idx, 1);
+                } else {
+                  users.push(sender);
+                }
+                if (users.length === 0) {
+                  delete existing[emoji];
+                } else {
+                  existing[emoji] = users;
+                }
+                return { ...msg, reactions: existing };
+              })
+            );
+            return;
+          }
+
           playReceiveSound();
+          notifyNewEncryptedMessage();
 
           const expiresAt = plaintext.burn_ttl
             ? Date.now() + plaintext.burn_ttl * 1000
@@ -252,7 +282,7 @@ export function useCryptoChat() {
     []
   );
 
-  const { status, participantCount, socketError, sendFrame, disconnect } = useWebSocket({
+  const { status, participantCount, socketError, rttMs, sendFrame, disconnect } = useWebSocket({
     roomId,
     onMessage: handleWebSocketFrame,
     enabled: !!roomId,
@@ -537,9 +567,9 @@ export function useCryptoChat() {
     [roomKey, roomId, identity, sendFrame]
   );
 
-  // Action: Upload & Send Encrypted File (with EXIF stripping and filename anonymization)
+  // Action: Upload & Send Encrypted File (with EXIF stripping, filename anonymization, and optional View-Once)
   const sendEncryptedFile = useCallback(
-    async (file: File) => {
+    async (file: File, isViewOnce?: boolean) => {
       if (!roomKey || !roomId) return;
 
       if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -589,8 +619,11 @@ export function useCryptoChat() {
         id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         sender_name: identity.name,
         color: identity.color,
-        text: `📎 Archivo seguro: ${anonymousFileName}`,
+        text: isViewOnce
+          ? `👁️ Foto efímera (Ver 1 sola vez)`
+          : `📎 Archivo seguro: ${anonymousFileName}`,
         timestamp: Date.now(),
+        is_view_once: isViewOnce,
         file: {
           file_id: fileId,
           file_name: anonymousFileName,
@@ -620,6 +653,146 @@ export function useCryptoChat() {
     },
     [roomKey, roomId, identity, sendFrame]
   );
+
+  // Action: Upload & Send Steganographic Carrier Image (LSB PNG)
+  const sendEncryptedStegoImage = useCallback(
+    async (stegoBlob: Blob, previewUrl: string, secretText: string) => {
+      if (!roomKey || !roomId) return;
+
+      const anonymousFileName = generateAnonymousFilename('stego.png', 'image/png');
+      const arrayBuffer = await stegoBlob.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuffer);
+      const envelope = await encryptBytes(roomKey, uint8, roomId);
+
+      const opaqueBlob = new Blob(
+        [
+          JSON.stringify({
+            ciphertext: envelope.ciphertext,
+            iv: envelope.iv,
+            v: 2,
+          }),
+        ],
+        { type: 'application/octet-stream' }
+      );
+
+      const uploadRes = await fetch(`${API_BASE_URL}/api/files/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: opaqueBlob,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Error al subir imagen esteganográfica al relay.');
+      }
+
+      const uploadData = await uploadRes.json();
+      const fileId = uploadData.file_id;
+
+      const plaintext: DecryptedMessagePlaintext = {
+        id: `stego-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        sender_name: identity.name,
+        color: identity.color,
+        text: `🖼️ Imagen con mensaje esteganográfico oculto (LSB)`,
+        timestamp: Date.now(),
+        is_stego: true,
+        stego_hidden_text: secretText,
+        file: {
+          file_id: fileId,
+          file_name: anonymousFileName,
+          file_size: stegoBlob.size,
+          mime_type: 'image/png',
+          is_metadata_scrubbed: true,
+        },
+      };
+
+      const msgEnvelope = await encryptJson(roomKey, plaintext, roomId);
+      sendFrame({
+        type: 'e2ee_message',
+        room_id: roomId,
+        payload: msgEnvelope,
+      });
+
+      playSendSound();
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...plaintext,
+          is_self: true,
+          file_blob_url: previewUrl,
+        },
+      ]);
+    },
+    [roomKey, roomId, identity, sendFrame]
+  );
+
+  // Action: Send E2EE Reaction to a Message
+  const sendReaction = useCallback(
+    async (targetMessageId: string, emoji: string) => {
+      if (!roomKey || !roomId) return;
+
+      const plaintext: DecryptedMessagePlaintext = {
+        id: `react-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        sender_name: identity.name,
+        color: identity.color,
+        text: '',
+        timestamp: Date.now(),
+        is_reaction_signal: true,
+        target_message_id: targetMessageId,
+        reaction_emoji: emoji,
+      };
+
+      // Optimistic update
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id !== targetMessageId) return msg;
+          const existing = { ...(msg.reactions || {}) };
+          const users = [...(existing[emoji] || [])];
+          const idx = users.indexOf(identity.name);
+          if (idx >= 0) {
+            users.splice(idx, 1);
+          } else {
+            users.push(identity.name);
+          }
+          if (users.length === 0) {
+            delete existing[emoji];
+          } else {
+            existing[emoji] = users;
+          }
+          return { ...msg, reactions: existing };
+        })
+      );
+
+      try {
+        const envelope = await encryptJson(roomKey, plaintext, roomId);
+        sendFrame({
+          type: 'e2ee_message',
+          room_id: roomId,
+          payload: envelope,
+        });
+      } catch (err) {
+        console.error('Failed to send reaction:', err);
+      }
+    },
+    [roomKey, roomId, identity, sendFrame]
+  );
+
+  // Action: Permanently burn viewed View-Once media in RAM
+  const burnViewOnceMessage = useCallback((messageId: string) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== messageId) return msg;
+        if (msg.file_blob_url) {
+          URL.revokeObjectURL(msg.file_blob_url);
+        }
+        return {
+          ...msg,
+          viewed: true,
+          file_blob_url: undefined,
+          text: '🔥 Contenido efímero ver una sola vez destruido permanentemente',
+        };
+      })
+    );
+  }, []);
 
   // Action: In-Memory Load & Decrypt Media (Images or Audio)
   const loadAndDecryptMedia = useCallback(
@@ -857,6 +1030,10 @@ export function useCryptoChat() {
     remoteNukeRoom,
     isDecoyTrafficActive,
     toggleDecoyTraffic,
+    rttMs,
+    sendReaction,
+    burnViewOnceMessage,
+    sendEncryptedStegoImage,
   };
 }
 
