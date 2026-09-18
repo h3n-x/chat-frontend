@@ -9,3 +9,5 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  VITE_API_URL = "https://chat-backend-haeb.onrender.com"
+  VITE_API_BASE_URL = "https://chat-backend-haeb.onrender.com"
