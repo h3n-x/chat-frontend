@@ -57,6 +57,20 @@ export const MessageList: React.FC<MessageListProps> = ({
           );
         }
 
+        if (msg.is_system) {
+          return (
+            <div key={msg.id} className="flex justify-center my-1.5">
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-neutral-900/90 border border-neutral-800 text-[11px] text-neutral-400 font-medium">
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: msg.color || '#9CA3AF' }}
+                />
+                <span>{msg.text}</span>
+              </span>
+            </div>
+          );
+        }
+
         return (
           <div
             key={msg.id}

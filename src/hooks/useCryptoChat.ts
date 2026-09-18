@@ -155,6 +155,38 @@ export function useCryptoChat() {
           }
         }
       }
+
+      // 4. Peer Joined Notification
+      else if (frame.type === 'peer_joined') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `system-joined-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            sender_name: 'Sistema',
+            color: '#10B981',
+            text: `Un participante se ha conectado (${frame.participant_count} en la sala)`,
+            timestamp: Date.now(),
+            is_self: false,
+            is_system: true,
+          },
+        ]);
+      }
+
+      // 5. Peer Left Notification
+      else if (frame.type === 'peer_left') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `system-left-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            sender_name: 'Sistema',
+            color: '#EF4444',
+            text: `Un participante se ha desconectado (${frame.participant_count} en la sala)`,
+            timestamp: Date.now(),
+            is_self: false,
+            is_system: true,
+          },
+        ]);
+      }
     },
     []
   );

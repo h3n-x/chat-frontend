@@ -54,7 +54,9 @@ export function useWebSocket({ roomId, onMessage, enabled }: UseWebSocketOptions
       try {
         const frame = JSON.parse(event.data) as WSInboundFrame;
 
-        if (frame.type === 'peer_joined') {
+        if (frame.type === 'room_welcome') {
+          setParticipantCount(frame.participant_count);
+        } else if (frame.type === 'peer_joined') {
           setParticipantCount(frame.participant_count);
         } else if (frame.type === 'peer_left') {
           setParticipantCount(frame.participant_count);

@@ -20,6 +20,7 @@ export interface DecryptedMessagePlaintext {
 
 export interface ChatMessage extends DecryptedMessagePlaintext {
   is_self: boolean;
+  is_system?: boolean;
   corrupted?: boolean;
   file_blob_url?: string;
   file_downloading?: boolean;
@@ -58,6 +59,13 @@ export interface WSInboundKeyDeliveryFrame {
   iv: string;
 }
 
+export interface WSInboundRoomWelcomeFrame {
+  type: 'room_welcome';
+  room_id: string;
+  peer_id: string;
+  participant_count: number;
+}
+
 export interface WSInboundPeerJoinedFrame {
   type: 'peer_joined';
   room_id: string;
@@ -83,6 +91,7 @@ export interface WSInboundErrorFrame {
 }
 
 export type WSInboundFrame =
+  | WSInboundRoomWelcomeFrame
   | WSInboundMessageFrame
   | WSInboundKeyRequestFrame
   | WSInboundKeyDeliveryFrame
