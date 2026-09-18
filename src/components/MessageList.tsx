@@ -82,15 +82,32 @@ export const MessageList: React.FC<MessageListProps> = ({
   }, [messages, isPeerTyping]);
 
   if (messages.length === 0) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-neutral-400 select-none">
-        <div className="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-3 text-neutral-500 shadow-lg">
-          <ShieldCheck className="w-6 h-6 text-emerald-500/80" aria-hidden="true" />
+    if (searchQuery && searchQuery.trim()) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-neutral-400 select-none animate-fade-in">
+          <img
+            src="/brand/05-empty-states/empty-search.svg"
+            alt="Sin resultados"
+            className="w-44 h-auto max-w-xs mb-3 opacity-90 drop-shadow-md pointer-events-none"
+          />
+          <p className="text-sm font-semibold text-neutral-200">Sin coincidencias en RAM</p>
+          <p className="text-xs text-neutral-400 max-w-xs mt-1">
+            No se encontraron mensajes ni archivos que contengan "{searchQuery}".
+          </p>
         </div>
-        <p className="text-sm font-medium text-neutral-300">Sala cifrada iniciada</p>
+      );
+    }
+
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-neutral-400 select-none animate-fade-in">
+        <img
+          src="/brand/05-empty-states/empty-chat.svg"
+          alt="Sala cifrada"
+          className="w-48 h-auto max-w-xs mb-3 opacity-90 drop-shadow-md pointer-events-none"
+        />
+        <p className="text-sm font-semibold text-neutral-200">Sala cifrada iniciada</p>
         <p className="text-xs text-neutral-400 max-w-xs mt-1">
-          Ningún mensaje se almacena en el servidor ni en tu disco. Envía tu primer mensaje,
-          nota de voz o comparte el código QR.
+          Ningún mensaje se almacena en el servidor ni en tu disco. Envía un mensaje, nota de voz, archivo o comparte el código QR.
         </p>
       </div>
     );

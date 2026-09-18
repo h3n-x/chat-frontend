@@ -1,7 +1,7 @@
 {
-  "name": "Chat Anónimo ZK",
+  "name": "Chat Anónimo v2.5",
   "short_name": "Chat ZK",
-  "description": "Sistema de mensajería efímera con cifrado E2EE real y cero persistencia.",
+  "description": "Sistema de mensajería efímera con cifrado E2EE real y cero persistencia en memoria RAM.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
@@ -11,6 +11,18 @@
     {
       "src": "/favicon.svg",
       "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }

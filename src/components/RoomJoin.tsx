@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Plus, ArrowRight, Loader2, Lock, EyeOff, HardDriveDownload, KeyRound } from 'lucide-react';
+import { Plus, ArrowRight, Loader2, Lock, EyeOff, HardDriveDownload, KeyRound } from 'lucide-react';
 import { mnemonicToBase64Key } from '../utils/bip39';
 
 interface RoomJoinProps {
@@ -88,11 +88,15 @@ export const RoomJoin: React.FC<RoomJoinProps> = ({
     <div className="max-w-xl w-full mx-auto px-4 py-8">
       {/* Header */}
       <header className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-emerald-950/60 border border-emerald-800/80 flex items-center justify-center mx-auto mb-4 text-emerald-400 shadow-xl shadow-emerald-950/40">
-          <Shield className="w-8 h-8" aria-hidden="true" />
+        <div className="w-16 h-16 rounded-2xl bg-emerald-950/60 border border-emerald-800/80 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-emerald-950/40 p-2.5">
+          <img
+            src="/brand/01-logo/logo-mark.svg"
+            alt="Chat Anónimo v2.5"
+            className="w-10 h-10 object-contain drop-shadow-md"
+          />
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight text-neutral-100 sm:text-4xl">
-          Chat Anónimo <span className="text-emerald-400 font-mono text-xl ml-1">v2.0</span>
+          Chat Anónimo <span className="text-emerald-400 font-mono text-xl ml-1">v2.5</span>
         </h1>
         <p className="mt-2 text-sm text-neutral-400 max-w-md mx-auto">
           Mensajería efímera de extremo a extremo (E2EE) con arquitectura{' '}

@@ -1,5 +1,9 @@
 <div align="center">
 
+<img src="public/og-image.svg" alt="Chat Anónimo v2.5 Banner" width="100%" />
+
+<br/><br/>
+
 # 🔒 Chat Anónimo — Frontend Client & Mobile App (v2.5)
 ### Cliente SPA Cero-Conocimiento en React 19 + TypeScript + WebCrypto Nativo + Capacitor Android
 

@@ -3,17 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" sizes="32x32" href="/favicon-32.svg" />
+    <link rel="icon" type="image/svg+xml" sizes="16x16" href="/favicon-16.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Chat anónimo y efímero con cifrado de extremo a extremo (E2EE) real y cero persistencia." />
+    <meta name="description" content="Chat Anónimo v2.5 — Mensajería efímera de extremo a extremo (E2EE) con arquitectura Zero-Knowledge Blind Relay, memoria RAM pura y cero persistencia." />
+    <meta name="author" content="Henry Pacheco (H3n)" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#0a0a0a" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>Chat Anónimo | E2EE Ephemeral Relay</title>
+
+    <!-- Open Graph / Social Previews -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://chat-zk.netlify.app/" />
+    <meta property="og:title" content="Chat Anónimo v2.5 — Zero-Knowledge Blind Relay" />
+    <meta property="og:description" content="Mensajería efímera en memoria RAM con cifrado WebCrypto AES-256-GCM + ECDH, desinfección profunda de metadatos, voz distorsionada y autodestrucción anti-forense." />
+    <meta property="og:image" content="https://chat-zk.netlify.app/og-image.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter Card Previews -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://chat-zk.netlify.app/" />
+    <meta name="twitter:title" content="Chat Anónimo v2.5 — Zero-Knowledge Blind Relay" />
+    <meta name="twitter:description" content="Mensajería efímera en memoria RAM con cifrado WebCrypto AES-256-GCM + ECDH, desinfección profunda de metadatos y autodestrucción anti-forense." />
+    <meta name="twitter:image" content="https://chat-zk.netlify.app/twitter-card.svg" />
+
+    <title>Chat Anónimo v2.5 | Zero-Knowledge Blind Relay</title>
   </head>
   <body class="bg-neutral-950 text-neutral-100 min-h-screen antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
