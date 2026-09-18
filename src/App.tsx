@@ -20,6 +20,7 @@ export const App: React.FC = () => {
     messages,
     isSasVerified,
     isSasModalOpen,
+    isPeerTyping,
     confirmSasMatch,
     rejectSasMatch,
     openSasModal,
@@ -27,9 +28,14 @@ export const App: React.FC = () => {
     joinWithKey,
     joinWithCodeOnly,
     sendMessage,
+    sendTypingSignal,
     sendEncryptedFile,
+    sendEncryptedAudio,
+    loadAndDecryptMedia,
     downloadAndDecryptFile,
+    purgeMessage,
     leaveRoom,
+    nukeRoom,
   } = useCryptoChat();
 
   // Check WebCrypto support on initial mount
@@ -88,12 +94,18 @@ export const App: React.FC = () => {
           isHandshaking={isHandshaking}
           isSasVerified={isSasVerified}
           isSasModalOpen={isSasModalOpen}
+          isPeerTyping={isPeerTyping}
           identity={identity}
           messages={messages}
           onSendMessage={sendMessage}
           onSendFile={sendEncryptedFile}
+          onSendAudio={sendEncryptedAudio}
           onDownloadFile={downloadAndDecryptFile}
+          onLoadMedia={loadAndDecryptMedia}
+          onPurgeMessage={purgeMessage}
+          onTyping={sendTypingSignal}
           onLeave={leaveRoom}
+          onNuke={nukeRoom}
           onConfirmSasMatch={confirmSasMatch}
           onRejectSasMatch={rejectSasMatch}
           onOpenSasModal={openSasModal}

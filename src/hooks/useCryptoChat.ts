@@ -22,6 +22,13 @@ import {
   EncryptedPayload,
 } from '../types';
 import { useWebSocket } from './useWebSocket';
+import {
+  playSendSound,
+  playReceiveSound,
+  playJoinSound,
+  playLeaveSound,
+  playNukeSound,
+} from '../utils/audio';
 
 const ANONYMOUS_ADJECTIVES = ['Sombra', 'Fantasma', 'Cripto', 'Espectro', 'Sigilo', 'Silencio', 'Vórtice'];
 const ACCENT_COLORS = ['#10B981', '#06B6D4', '#8B5CF6', '#F59E0B', '#EC4899', '#3B82F6'];
@@ -44,7 +51,9 @@ export function useCryptoChat() {
   const [handshakeError, setHandshakeError] = useState<string | null>(null);
   const [isSasVerified, setIsSasVerified] = useState<boolean>(false);
   const [isSasModalOpen, setIsSasModalOpen] = useState<boolean>(false);
+  const [isPeerTyping, setIsPeerTyping] = useState<boolean>(false);
   const hasAutoOpenedSasRef = useRef<boolean>(false);
+  const typingTimeoutRef = useRef<number | null>(null);
 
   // In-memory ECDH handshake state
   const handshakeRef = useRef<ECDHKeyPair | null>(null);
@@ -72,11 +81,18 @@ export function useCryptoChat() {
             frame.room_id
           );
 
+          playReceiveSound();
+
+          const expiresAt = plaintext.burn_ttl
+            ? Date.now() + plaintext.burn_ttl * 1000
+            : undefined;
+
           setMessages((prev) => [
             ...prev,
             {
               ...plaintext,
               is_self: false,
+              burn_expires_at: expiresAt,
             },
           ]);
         } catch (err) {
@@ -158,6 +174,7 @@ export function useCryptoChat() {
 
       // 4. Peer Joined Notification
       else if (frame.type === 'peer_joined') {
+        playJoinSound();
         setMessages((prev) => [
           ...prev,
           {
@@ -174,6 +191,7 @@ export function useCryptoChat() {
 
       // 5. Peer Left Notification
       else if (frame.type === 'peer_left') {
+        playLeaveSound();
         setMessages((prev) => [
           ...prev,
           {
@@ -187,11 +205,24 @@ export function useCryptoChat() {
           },
         ]);
       }
+
+      // 6. Peer Typing Notification
+      else if (frame.type === 'typing') {
+        setIsPeerTyping(frame.is_typing);
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        if (frame.is_typing) {
+          typingTimeoutRef.current = window.setTimeout(() => {
+            setIsPeerTyping(false);
+          }, 3000);
+        }
+      }
     },
     []
   );
 
-  const { status, participantCount, socketError, sendFrame } = useWebSocket({
+  const { status, participantCount, socketError, sendFrame, disconnect } = useWebSocket({
     roomId,
     onMessage: handleWebSocketFrame,
     enabled: !!roomId,
@@ -275,7 +306,7 @@ export function useCryptoChat() {
 
   // Action: Send Text Message
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, burnTtl?: number) => {
       if (!roomKey || !roomId || !text.trim()) return;
 
       const plaintext: DecryptedMessagePlaintext = {
@@ -284,9 +315,10 @@ export function useCryptoChat() {
         color: identity.color,
         text: text.trim(),
         timestamp: Date.now(),
+        burn_ttl: burnTtl && burnTtl > 0 ? burnTtl : undefined,
       };
 
-      // Encrypt with AES-256-GCM + AAD
+      // Encrypt with AES-256-GCM + padding + AAD
       const envelope = await encryptJson(roomKey, plaintext, roomId);
 
       // Relay through server
@@ -297,8 +329,135 @@ export function useCryptoChat() {
       });
 
       if (sent) {
-        setMessages((prev) => [...prev, { ...plaintext, is_self: true }]);
+        playSendSound();
+        const expiresAt = plaintext.burn_ttl
+          ? Date.now() + plaintext.burn_ttl * 1000
+          : undefined;
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            ...plaintext,
+            is_self: true,
+            burn_expires_at: expiresAt,
+          },
+        ]);
       }
+    },
+    [roomKey, roomId, identity, sendFrame]
+  );
+
+  // Action: Purge Message (for burn-after-reading or manual wipe)
+  const purgeMessage = useCallback((id: string) => {
+    setMessages((prev) => {
+      const target = prev.find((m) => m.id === id);
+      if (target?.file_blob_url) {
+        URL.revokeObjectURL(target.file_blob_url);
+      }
+      if (target?.audio_blob_url) {
+        URL.revokeObjectURL(target.audio_blob_url);
+      }
+      return prev.filter((m) => m.id !== id);
+    });
+  }, []);
+
+  // Action: Send Typing Signal (throttled)
+  const lastTypingSentRef = useRef<number>(0);
+  const stopTypingTimeoutRef = useRef<number | null>(null);
+
+  const sendTypingSignal = useCallback(
+    (isTyping: boolean) => {
+      if (!roomId) return;
+      const now = Date.now();
+      if (isTyping) {
+        if (now - lastTypingSentRef.current > 2000) {
+          sendFrame({ type: 'typing', room_id: roomId, is_typing: true });
+          lastTypingSentRef.current = now;
+        }
+        if (stopTypingTimeoutRef.current) {
+          clearTimeout(stopTypingTimeoutRef.current);
+        }
+        stopTypingTimeoutRef.current = window.setTimeout(() => {
+          sendFrame({ type: 'typing', room_id: roomId, is_typing: false });
+        }, 2500);
+      } else {
+        if (stopTypingTimeoutRef.current) {
+          clearTimeout(stopTypingTimeoutRef.current);
+          stopTypingTimeoutRef.current = null;
+        }
+        sendFrame({ type: 'typing', room_id: roomId, is_typing: false });
+      }
+    },
+    [roomId, sendFrame]
+  );
+
+  // Action: Send Encrypted Audio Note
+  const sendEncryptedAudio = useCallback(
+    async (blob: Blob, durationSec: number) => {
+      if (!roomKey || !roomId) return;
+
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuffer);
+
+      const envelope = await encryptBytes(roomKey, uint8, roomId);
+
+      const opaqueBlob = new Blob(
+        [
+          JSON.stringify({
+            ciphertext: envelope.ciphertext,
+            iv: envelope.iv,
+            v: 2,
+          }),
+        ],
+        { type: 'application/octet-stream' }
+      );
+
+      const uploadRes = await fetch(`${API_BASE_URL}/api/files/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: opaqueBlob,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Error al enviar nota de voz.');
+      }
+
+      const uploadData = await uploadRes.json();
+      const fileId = uploadData.file_id;
+
+      const plaintext: DecryptedMessagePlaintext = {
+        id: `audio-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        sender_name: identity.name,
+        color: identity.color,
+        text: '🎤 Nota de voz cifrada',
+        timestamp: Date.now(),
+        is_audio: true,
+        audio_duration: durationSec,
+        file: {
+          file_id: fileId,
+          file_name: 'voice-note.webm',
+          file_size: blob.size,
+          mime_type: blob.type || 'audio/webm',
+        },
+      };
+
+      const msgEnvelope = await encryptJson(roomKey, plaintext, roomId);
+      sendFrame({
+        type: 'e2ee_message',
+        room_id: roomId,
+        payload: msgEnvelope,
+      });
+
+      playSendSound();
+      const localUrl = URL.createObjectURL(blob);
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...plaintext,
+          is_self: true,
+          audio_blob_url: localUrl,
+        },
+      ]);
     },
     [roomKey, roomId, identity, sendFrame]
   );
@@ -320,7 +479,6 @@ export function useCryptoChat() {
       const envelope = await encryptBytes(roomKey, uint8, roomId);
 
       // 3. Prepare opaque payload for streaming upload
-      // Combine ciphertext and IV into binary or JSON payload for streaming
       const opaqueBlob = new Blob(
         [
           JSON.stringify({
@@ -368,6 +526,7 @@ export function useCryptoChat() {
         payload: msgEnvelope,
       });
 
+      playSendSound();
       // Show locally with immediate object URL
       const localUrl = URL.createObjectURL(file);
       setMessages((prev) => [
@@ -382,7 +541,52 @@ export function useCryptoChat() {
     [roomKey, roomId, identity, sendFrame]
   );
 
-  // Action: Download & Decrypt File
+  // Action: In-Memory Load & Decrypt Media (Images or Audio)
+  const loadAndDecryptMedia = useCallback(
+    async (fileId: string, mimeType: string, messageId: string) => {
+      if (!roomKey || !roomId) return;
+
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, file_downloading: true } : m))
+      );
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/files/download/${fileId}`);
+        if (!res.ok) {
+          throw new Error('El archivo ha expirado o ya no está disponible.');
+        }
+
+        const rawText = await res.text();
+        const envelope = JSON.parse(rawText) as EncryptedPayload;
+        const decryptedBytes = await decryptBytes(roomKey, envelope, roomId);
+        const blob = new Blob([decryptedBytes as unknown as BlobPart], { type: mimeType });
+        const objectUrl = URL.createObjectURL(blob);
+
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id === messageId) {
+              return {
+                ...m,
+                file_downloading: false,
+                file_blob_url: mimeType.startsWith('image/') ? objectUrl : m.file_blob_url,
+                audio_blob_url:
+                  m.is_audio || mimeType.startsWith('audio/') ? objectUrl : m.audio_blob_url,
+              };
+            }
+            return m;
+          })
+        );
+      } catch (err) {
+        console.error('Error loading media:', err);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? { ...m, file_downloading: false } : m))
+        );
+      }
+    },
+    [roomKey, roomId]
+  );
+
+  // Action: Download & Decrypt File (File Attachment)
   const downloadAndDecryptFile = useCallback(
     async (fileId: string, fileName: string, mimeType: string) => {
       if (!roomKey || !roomId) return;
@@ -422,17 +626,62 @@ export function useCryptoChat() {
 
   // Action: Leave Room
   const leaveRoom = useCallback(() => {
+    setMessages((prev) => {
+      prev.forEach((msg) => {
+        if (msg.file_blob_url) URL.revokeObjectURL(msg.file_blob_url);
+        if (msg.audio_blob_url) URL.revokeObjectURL(msg.audio_blob_url);
+      });
+      return [];
+    });
+    disconnect();
     setRoomId('');
     setRoomKey(null);
     setRoomKeyBase64('');
     setFingerprint('');
-    setMessages([]);
     setIsHandshaking(false);
     setIsSasVerified(false);
     setIsSasModalOpen(false);
     hasAutoOpenedSasRef.current = false;
-    window.location.hash = '';
-  }, []);
+    if (window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname);
+    } else {
+      window.location.hash = '';
+    }
+  }, [disconnect]);
+
+  // Action: Nuke Room (Panic Button - zero wipe)
+  const nukeRoom = useCallback(() => {
+    playNukeSound();
+
+    setMessages((prev) => {
+      prev.forEach((msg) => {
+        if (msg.file_blob_url) URL.revokeObjectURL(msg.file_blob_url);
+        if (msg.audio_blob_url) URL.revokeObjectURL(msg.audio_blob_url);
+      });
+      return [];
+    });
+
+    disconnect();
+
+    setRoomId('');
+    setRoomKey(null);
+    setRoomKeyBase64('');
+    setFingerprint('');
+    setIsHandshaking(false);
+    setIsSasVerified(false);
+    setIsSasModalOpen(false);
+    handshakeRef.current = null;
+    roomKeyRef.current = null;
+
+    if (window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname);
+    } else {
+      window.location.hash = '';
+    }
+
+    // Force replace window location to clean root
+    window.location.replace(window.location.origin + window.location.pathname);
+  }, [disconnect]);
 
   // Action: Confirm SAS match (unblocks chatting)
   const confirmSasMatch = useCallback(() => {
@@ -465,6 +714,7 @@ export function useCryptoChat() {
     isHandshaking,
     isSasVerified,
     isSasModalOpen,
+    isPeerTyping,
     confirmSasMatch,
     rejectSasMatch,
     openSasModal,
@@ -472,9 +722,14 @@ export function useCryptoChat() {
     joinWithKey,
     joinWithCodeOnly,
     sendMessage,
+    sendTypingSignal,
     sendEncryptedFile,
+    sendEncryptedAudio,
+    loadAndDecryptMedia,
     downloadAndDecryptFile,
+    purgeMessage,
     leaveRoom,
+    nukeRoom,
   };
 }
 

@@ -10,6 +10,8 @@ import {
   wrapRoomKey,
   unwrapRoomKey,
   generateFingerprint,
+  padBytes,
+  unpadBytes,
 } from './webcrypto';
 
 describe('WebCrypto E2EE Primitives', () => {
@@ -92,5 +94,24 @@ describe('WebCrypto E2EE Primitives', () => {
     for (const part of parts) {
       expect(part.length).toBeGreaterThan(0);
     }
+  });
+
+  it('should pad and unpad bytes to 256-byte blocks resisting traffic analysis', () => {
+    const raw = new TextEncoder().encode('Hello secret world');
+    const padded = padBytes(raw, 256);
+
+    // Must be padded to exact multiple of 256 bytes
+    expect(padded.byteLength % 256).toBe(0);
+    expect(padded.byteLength).toBe(256);
+
+    // Unpadding must restore exact raw bytes
+    const restored = unpadBytes(padded);
+    expect(new TextDecoder().decode(restored)).toBe('Hello secret world');
+
+    // Payloads larger than 256 bytes must pad to 512 bytes
+    const large = new Uint8Array(300).fill(65);
+    const paddedLarge = padBytes(large, 256);
+    expect(paddedLarge.byteLength).toBe(512);
+    expect(unpadBytes(paddedLarge)).toEqual(large);
   });
 });

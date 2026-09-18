@@ -10,6 +10,9 @@ export interface DecryptedMessagePlaintext {
   color: string;
   text: string;
   timestamp: number;
+  burn_ttl?: number; // TTL in seconds (e.g. 15, 30, 60, 300)
+  is_audio?: boolean;
+  audio_duration?: number;
   file?: {
     file_id: string;
     file_name: string;
@@ -24,11 +27,14 @@ export interface ChatMessage extends DecryptedMessagePlaintext {
   corrupted?: boolean;
   file_blob_url?: string;
   file_downloading?: boolean;
+  audio_blob_url?: string;
+  burn_expires_at?: number; // timestamp in ms when the message must be deleted
 }
 
 export type ConnectionStatus =
   | 'disconnected'
   | 'connecting'
+  | 'reconnecting'
   | 'handshaking'
   | 'connected'
   | 'error';
@@ -84,6 +90,13 @@ export interface WSInboundPongFrame {
   type: 'pong';
 }
 
+export interface WSInboundTypingFrame {
+  type: 'typing';
+  room_id: string;
+  sender_id: string;
+  is_typing: boolean;
+}
+
 export interface WSInboundErrorFrame {
   type: 'error';
   code: string;
@@ -97,5 +110,6 @@ export type WSInboundFrame =
   | WSInboundKeyDeliveryFrame
   | WSInboundPeerJoinedFrame
   | WSInboundPeerLeftFrame
+  | WSInboundTypingFrame
   | WSInboundPongFrame
   | WSInboundErrorFrame;

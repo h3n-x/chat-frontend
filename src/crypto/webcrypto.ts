@@ -150,7 +150,50 @@ export async function decryptBytes(
 }
 
 /**
- * Encrypt a JSON object into an EncryptedPayload.
+ * Pads bytes to a multiple of blockSize (default 256 bytes, minimum 256 bytes)
+ * using a 4-byte big-endian length prefix and cryptographically random noise.
+ * Mitigates network traffic analysis and packet length inference side-channels.
+ */
+export function padBytes(data: Uint8Array, blockSize: number = 256): Uint8Array {
+  const dataLen = data.byteLength;
+  const headerLen = 4;
+  const totalNeeded = headerLen + dataLen;
+  const remainder = totalNeeded % blockSize;
+  const paddingLen = remainder === 0 ? 0 : blockSize - remainder;
+  const totalLen = Math.max(blockSize, totalNeeded + paddingLen);
+
+  const padded = new Uint8Array(totalLen);
+  const view = new DataView(padded.buffer);
+  view.setUint32(0, dataLen, false);
+
+  padded.set(data, headerLen);
+
+  if (totalLen > totalNeeded) {
+    const noise = new Uint8Array(totalLen - totalNeeded);
+    getCrypto().getRandomValues(noise);
+    padded.set(noise, totalNeeded);
+  }
+
+  return padded;
+}
+
+/**
+ * Strips the 4-byte length prefix and random padding.
+ * Falls back gracefully to raw bytes if data was not padded (backwards compatibility).
+ */
+export function unpadBytes(padded: Uint8Array): Uint8Array {
+  if (padded.byteLength >= 4) {
+    const view = new DataView(padded.buffer, padded.byteOffset, padded.byteLength);
+    const dataLen = view.getUint32(0, false);
+    if (dataLen <= padded.byteLength - 4) {
+      return padded.subarray(4, 4 + dataLen);
+    }
+  }
+  return padded;
+}
+
+/**
+ * Encrypt a JSON object into an EncryptedPayload with traffic analysis resistance padding.
  */
 export async function encryptJson<T>(
   key: CryptoKey,
@@ -158,12 +201,13 @@ export async function encryptJson<T>(
   roomId: string
 ): Promise<EncryptedPayload> {
   const jsonStr = JSON.stringify(data);
-  const bytes = new TextEncoder().encode(jsonStr);
-  return encryptBytes(key, bytes, roomId);
+  const rawBytes = new TextEncoder().encode(jsonStr);
+  const paddedBytes = padBytes(rawBytes);
+  return encryptBytes(key, paddedBytes, roomId);
 }
 
 /**
- * Decrypt an EncryptedPayload back into a parsed JSON object.
+ * Decrypt an EncryptedPayload back into a parsed JSON object, stripping cryptographic padding.
  */
 export async function decryptJson<T>(
   key: CryptoKey,
@@ -171,7 +215,8 @@ export async function decryptJson<T>(
   roomId: string
 ): Promise<T> {
   const decryptedBytes = await decryptBytes(key, payload, roomId);
-  const jsonStr = new TextDecoder().decode(decryptedBytes);
+  const unpaddedBytes = unpadBytes(decryptedBytes);
+  const jsonStr = new TextDecoder().decode(unpaddedBytes);
   return JSON.parse(jsonStr) as T;
 }
 
