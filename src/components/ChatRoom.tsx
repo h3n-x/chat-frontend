@@ -13,6 +13,8 @@ import {
   Radio,
   Search,
   X,
+  MoreVertical,
+  Globe,
 } from 'lucide-react';
 import { SecurityBadge } from './SecurityBadge';
 import { SasVerificationModal } from './SasVerificationModal';
@@ -108,6 +110,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Esc x 3 Panic shortcut detector
   const escCountRef = useRef<number>(0);
@@ -300,9 +303,9 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
           </div>
         </div>
 
-        {/* Right: Actions (QR, Sound, Share, Nuke, Leave) */}
+        {/* Right: Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* QR Code Modal Trigger */}
+          {/* QR Code Modal Trigger (always visible) */}
           {roomKeyBase64 && (
             <button
               onClick={() => setIsQrOpen(true)}
@@ -315,78 +318,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
             </button>
           )}
 
-          {/* Search in RAM Button */}
-          <button
-            onClick={() => setIsSearchOpen((prev) => !prev)}
-            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all flex items-center gap-1 text-xs font-semibold ${
-              isSearchOpen || searchQuery
-                ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-400 shadow-sm'
-                : 'bg-neutral-800 hover:bg-neutral-750 border-transparent text-neutral-400 hover:text-white'
-            }`}
-            title="Buscar en memoria RAM (Ctrl + F)"
-            aria-label="Buscar mensajes"
-          >
-            <Search className="w-4 h-4" />
-            <span className="hidden md:inline">Buscar</span>
-          </button>
-
-          {/* Spy Mode / Hold to Reveal Toggle */}
-          <button
-            onClick={handleToggleSpyMode}
-            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all flex items-center gap-1 text-xs font-semibold ${
-              isSpyMode
-                ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-400 shadow-sm'
-                : 'bg-neutral-800 hover:bg-neutral-750 border-transparent text-neutral-400 hover:text-white'
-            }`}
-            title={
-              isSpyMode
-                ? 'Modo Espía ACTIVO (mensajes difuminados, mantener presionado para leer)'
-                : 'Activar Modo Espía (anti-captura y hombro: difumina mensajes hasta mantener presionado)'
-            }
-            aria-label="Alternar Modo Espía"
-          >
-            {isSpyMode ? (
-              <EyeOff className="w-4 h-4 text-emerald-400" />
-            ) : (
-              <Eye className="w-4 h-4 text-neutral-400" />
-            )}
-            <span className="hidden md:inline">Espía</span>
-          </button>
-
-          {/* Decoy Traffic / Camouflage Toggle */}
-          <button
-            onClick={onToggleDecoyTraffic}
-            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all flex items-center gap-1 text-xs font-semibold ${
-              isDecoyTrafficActive
-                ? 'bg-amber-950/80 border-amber-500/70 text-amber-400 shadow-sm'
-                : 'bg-neutral-800 hover:bg-neutral-750 border-transparent text-neutral-400 hover:text-white'
-            }`}
-            title={
-              isDecoyTrafficActive
-                ? 'Camuflaje de Tráfico ACTIVO: Generando paquetes señuelo cifrados periódicos para ofuscar pautas de tráfico'
-                : 'Activar Camuflaje de Tráfico (envía tramas cifradas señuelo periódicas para derrotar análisis de tráfico)'
-            }
-            aria-label="Alternar camuflaje de tráfico señuelo"
-          >
-            <Radio className={`w-4 h-4 ${isDecoyTrafficActive ? 'animate-pulse text-amber-400' : 'text-neutral-400'}`} />
-            <span className="hidden md:inline">Camuflaje</span>
-          </button>
-
-          {/* Sound Synthesizer Mute Toggle */}
-          <button
-            onClick={handleToggleSound}
-            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors flex items-center gap-1 text-xs"
-            title={isMuted ? 'Activar efectos de sonido' : 'Silenciar efectos de sonido'}
-            aria-label="Alternar sonidos"
-          >
-            {isMuted ? (
-              <VolumeX className="w-4 h-4 text-neutral-500" />
-            ) : (
-              <Volume2 className="w-4 h-4 text-emerald-400" />
-            )}
-          </button>
-
-          {/* Panic / Nuke Button */}
+          {/* Panic / Nuke Button (always visible for emergency) */}
           <button
             onClick={() => setIsNukeModalOpen(true)}
             className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-800/80 text-red-300 hover:text-red-100 text-xs font-semibold transition-all shadow-sm group"
@@ -397,16 +329,206 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
             <span className="hidden lg:inline">Pánico</span>
           </button>
 
-          {/* Leave Button */}
-          <button
-            onClick={onLeave}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold transition-colors"
-            title="Salir de la sala"
-            aria-label="Salir de la sala"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Salir</span>
-          </button>
+          {/* Desktop-only Inline Controls (Search, Spy, Decoy, Sound, Leave) */}
+          <div className="hidden sm:flex items-center gap-1.5 sm:gap-2">
+            {/* Search in RAM Button */}
+            <button
+              onClick={() => setIsSearchOpen((prev) => !prev)}
+              className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all flex items-center gap-1 text-xs font-semibold ${
+                isSearchOpen || searchQuery
+                  ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-400 shadow-sm'
+                  : 'bg-neutral-800 hover:bg-neutral-750 border-transparent text-neutral-400 hover:text-white'
+              }`}
+              title="Buscar en memoria RAM (Ctrl + F)"
+              aria-label="Buscar mensajes"
+            >
+              <Search className="w-4 h-4" />
+              <span className="hidden md:inline">Buscar</span>
+            </button>
+
+            {/* Spy Mode / Hold to Reveal Toggle */}
+            <button
+              onClick={handleToggleSpyMode}
+              className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all flex items-center gap-1 text-xs font-semibold ${
+                isSpyMode
+                  ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-400 shadow-sm'
+                  : 'bg-neutral-800 hover:bg-neutral-750 border-transparent text-neutral-400 hover:text-white'
+              }`}
+              title={
+                isSpyMode
+                  ? 'Modo Espía ACTIVO (mensajes difuminados, mantener presionado para leer)'
+                  : 'Activar Modo Espía (anti-captura y hombro: difumina mensajes hasta mantener presionado)'
+              }
+              aria-label="Alternar Modo Espía"
+            >
+              {isSpyMode ? (
+                <EyeOff className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <Eye className="w-4 h-4 text-neutral-400" />
+              )}
+              <span className="hidden md:inline">Espía</span>
+            </button>
+
+            {/* Decoy Traffic / Camouflage Toggle */}
+            <button
+              onClick={onToggleDecoyTraffic}
+              className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all flex items-center gap-1 text-xs font-semibold ${
+                isDecoyTrafficActive
+                  ? 'bg-amber-950/80 border-amber-500/70 text-amber-400 shadow-sm'
+                  : 'bg-neutral-800 hover:bg-neutral-750 border-transparent text-neutral-400 hover:text-white'
+              }`}
+              title={
+                isDecoyTrafficActive
+                  ? 'Camuflaje de Tráfico ACTIVO: Generando paquetes señuelo cifrados periódicos para ofuscar pautas de tráfico'
+                  : 'Activar Camuflaje de Tráfico (envía tramas cifradas señuelo periódicas para derrotar análisis de tráfico)'
+              }
+              aria-label="Alternar camuflaje de tráfico señuelo"
+            >
+              <Radio className={`w-4 h-4 ${isDecoyTrafficActive ? 'animate-pulse text-amber-400' : 'text-neutral-400'}`} />
+              <span className="hidden md:inline">Camuflaje</span>
+            </button>
+
+            {/* Sound Synthesizer Mute Toggle */}
+            <button
+              onClick={handleToggleSound}
+              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors flex items-center gap-1 text-xs"
+              title={isMuted ? 'Activar efectos de sonido' : 'Silenciar efectos de sonido'}
+              aria-label="Alternar sonidos"
+            >
+              {isMuted ? (
+                <VolumeX className="w-4 h-4 text-neutral-500" />
+              ) : (
+                <Volume2 className="w-4 h-4 text-emerald-400" />
+              )}
+            </button>
+
+            {/* Leave Button */}
+            <button
+              onClick={onLeave}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold transition-colors"
+              title="Salir de la sala"
+              aria-label="Salir de la sala"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Salir</span>
+            </button>
+          </div>
+
+          {/* Mobile-only 3-dots Menu Button & Dropdown */}
+          <div className="relative sm:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+              className={`p-1.5 rounded-xl border transition-all flex items-center justify-center ${
+                isMobileMenuOpen
+                  ? 'bg-neutral-800 border-neutral-700 text-white'
+                  : 'bg-neutral-850 border-neutral-800 text-neutral-300 hover:text-white'
+              }`}
+              title="Más opciones y herramientas de privacidad"
+              aria-label="Más opciones"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {/* Mobile Action Dropdown */}
+            {isMobileMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 w-56 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 text-xs animate-fade-in">
+                  {/* Search in RAM */}
+                  <button
+                    onClick={() => {
+                      setIsSearchOpen((p) => !p);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-neutral-800 text-neutral-200 text-left transition-colors"
+                  >
+                    <Search className="w-4 h-4 text-emerald-400" />
+                    <span>Buscar en memoria RAM</span>
+                  </button>
+
+                  {/* Spy Mode */}
+                  <button
+                    onClick={() => {
+                      handleToggleSpyMode();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-neutral-800 text-neutral-200 text-left transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {isSpyMode ? (
+                        <EyeOff className="w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-neutral-400" />
+                      )}
+                      <span>Modo Espía</span>
+                    </div>
+                    {isSpyMode && <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800">ON</span>}
+                  </button>
+
+                  {/* Decoy Traffic */}
+                  <button
+                    onClick={() => {
+                      onToggleDecoyTraffic();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-neutral-800 text-neutral-200 text-left transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Radio className={`w-4 h-4 ${isDecoyTrafficActive ? 'text-amber-400 animate-pulse' : 'text-neutral-400'}`} />
+                      <span>Tráfico Señuelo</span>
+                    </div>
+                    {isDecoyTrafficActive && <span className="text-[10px] text-amber-400 font-bold bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800">ON</span>}
+                  </button>
+
+                  {/* Mute/Sound */}
+                  <button
+                    onClick={() => {
+                      handleToggleSound();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-neutral-800 text-neutral-200 text-left transition-colors"
+                  >
+                    {isMuted ? (
+                      <VolumeX className="w-4 h-4 text-neutral-500" />
+                    ) : (
+                      <Volume2 className="w-4 h-4 text-emerald-400" />
+                    )}
+                    <span>{isMuted ? 'Activar Sonidos' : 'Silenciar Sonidos'}</span>
+                  </button>
+
+                  {/* Tor / Proxy Settings */}
+                  <button
+                    onClick={() => {
+                      setIsTorSettingsOpen(true);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-neutral-800 text-neutral-200 text-left transition-colors"
+                  >
+                    <Globe className="w-4 h-4 text-purple-400" />
+                    <span>Red Tor / Proxy</span>
+                  </button>
+
+                  <div className="h-px bg-neutral-800 my-1" />
+
+                  {/* Leave Room */}
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onLeave();
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-red-950/50 text-red-400 text-left transition-colors font-medium"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Abandonar Sala</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 

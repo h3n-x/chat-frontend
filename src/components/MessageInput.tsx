@@ -141,145 +141,150 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           onCancel={() => setIsRecordingAudio(false)}
         />
       ) : (
-        <form onSubmit={handleSend} className="flex items-end gap-2">
-          {/* Hidden File Input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileChange}
-            className="hidden"
-            id="chat-file-upload"
-            disabled={disabled || fileUploading}
-          />
-
-          {/* Attachment Button */}
-          <label
-            htmlFor="chat-file-upload"
-            className={`p-2.5 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 text-neutral-300 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-emerald-500 shrink-0 flex items-center justify-center ${
-              disabled || fileUploading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            title="Adjuntar archivo o imagen cifrada (máx. 15MB)"
-            aria-label="Adjuntar archivo o imagen cifrada (máx. 15MB)"
-          >
-            {fileUploading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
-            ) : (
-              <Paperclip className="w-5 h-5" />
-            )}
-          </label>
-
-          {/* Steganography LSB Button */}
-          {onOpenSteganography && (
+        <form onSubmit={handleSend} className="flex flex-col gap-2">
+          {/* Top Tier: Security & Ephemeral Controls Ribbon */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs scrollbar-none select-none">
+            {/* Burn TTL Cycle */}
             <button
               type="button"
-              onClick={onOpenSteganography}
-              disabled={disabled || fileUploading || sending}
-              className={`p-2.5 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 text-neutral-400 hover:text-indigo-400 transition-colors shrink-0 flex items-center justify-center ${
-                disabled ? 'opacity-50 cursor-not-allowed' : ''
+              onClick={handleCycleBurnTtl}
+              disabled={disabled}
+              className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono font-medium transition-all shrink-0 flex items-center gap-1.5 ${
+                selectedBurn.ttl > 0
+                  ? 'bg-amber-950/80 border-amber-500/80 text-amber-300 shadow-xs'
+                  : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200'
               }`}
-              title="Esteganografía: Ocultar texto confidencial dentro de una imagen portadora"
-              aria-label="Esteganografía LSB"
+              title={selectedBurn.title}
+              aria-label="Configurar temporizador de autodestrucción"
             >
-              <ImageIcon className="w-5 h-5" />
+              <Flame
+                className={`w-3.5 h-3.5 ${
+                  selectedBurn.ttl > 0 ? 'text-amber-400 fill-amber-400/20' : 'text-neutral-500'
+                }`}
+              />
+              <span>Destruir: {selectedBurn.label}</span>
             </button>
-          )}
 
-          {/* View-Once Toggle Button */}
-          <button
-            type="button"
-            onClick={() => setIsViewOnce((prev) => !prev)}
-            disabled={disabled || fileUploading || sending}
-            className={`px-2 py-2.5 rounded-xl border text-xs font-semibold transition-all shrink-0 flex items-center gap-1 ${
-              isViewOnce
-                ? 'bg-amber-950/80 border-amber-500/80 text-amber-400 shadow-sm'
-                : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200'
-            }`}
-            title={
-              isViewOnce
-                ? 'Modo Ver 1 sola vez ACTIVO: El próximo archivo adjunto se destruirá permanentemente tras 7s'
-                : 'Activar Ver 1 sola vez: El archivo adjunto se destruye permanentemente tras abrirse'
-            }
-            aria-label="Alternar Ver 1 sola vez"
-          >
-            <Eye className={`w-4 h-4 ${isViewOnce ? 'animate-pulse text-amber-400' : 'text-neutral-500'}`} />
-            <span>1x</span>
-          </button>
-
-          {/* Voice Note Button */}
-          <button
-            type="button"
-            onClick={() => setIsRecordingAudio(true)}
-            disabled={disabled || fileUploading || sending}
-            className={`p-2.5 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 text-neutral-300 hover:text-emerald-400 transition-colors shrink-0 flex items-center justify-center ${
-              disabled ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            title="Grabar nota de voz cifrada E2EE"
-            aria-label="Grabar nota de voz cifrada"
-          >
-            <Mic className="w-5 h-5" />
-          </button>
-
-          {/* Burn-after-reading TTL Cycle Toggle */}
-          <button
-            type="button"
-            onClick={handleCycleBurnTtl}
-            disabled={disabled}
-            className={`px-2 py-2.5 rounded-xl border text-xs font-mono font-medium transition-all shrink-0 flex items-center gap-1 ${
-              selectedBurn.ttl > 0
-                ? 'bg-amber-950/70 border-amber-600/80 text-amber-400 shadow-sm'
-                : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200'
-            }`}
-            title={selectedBurn.title}
-            aria-label="Configurar temporizador de autodestrucción"
-          >
-            <Flame
-              className={`w-4 h-4 ${
-                selectedBurn.ttl > 0 ? 'text-amber-400 fill-amber-400/20' : 'text-neutral-500'
+            {/* View-Once Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsViewOnce((prev) => !prev)}
+              disabled={disabled || fileUploading || sending}
+              className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-all shrink-0 flex items-center gap-1.5 ${
+                isViewOnce
+                  ? 'bg-amber-950/80 border-amber-500/80 text-amber-300 shadow-xs'
+                  : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200'
               }`}
-            />
-            <span>{selectedBurn.label}</span>
-          </button>
-
-          {/* Textarea */}
-          <div className="flex-1 relative">
-            <textarea
-              value={text}
-              onChange={handleTextChange}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                disabled
-                  ? 'Conectando a la sala...'
-                  : selectedBurn.ttl > 0
-                  ? `Mensaje con autodestrucción (${selectedBurn.label})...`
-                  : 'Escribe un mensaje seguro (Enter para enviar)...'
+              title={
+                isViewOnce
+                  ? 'Modo Ver 1 sola vez ACTIVO: El próximo archivo adjunto se destruirá permanentemente tras 7s'
+                  : 'Activar Ver 1 sola vez: El archivo adjunto se destruye permanentemente tras abrirse'
               }
-              disabled={disabled || sending}
-              rows={1}
-              maxLength={MAX_MESSAGE_LENGTH}
-              aria-label="Mensaje seguro"
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none disabled:opacity-50 transition-all max-h-32"
-            />
-            {text.length > 1500 && (
-              <span className="absolute right-3 bottom-2 text-[10px] text-neutral-400 font-mono">
-                {text.length}/{MAX_MESSAGE_LENGTH}
-              </span>
+              aria-label="Alternar Ver 1 sola vez"
+            >
+              <Eye className={`w-3.5 h-3.5 ${isViewOnce ? 'animate-pulse text-amber-400' : 'text-neutral-500'}`} />
+              <span>Ver 1 vez {isViewOnce ? '(Activo)' : ''}</span>
+            </button>
+
+            {/* Steganography LSB Button */}
+            {onOpenSteganography && (
+              <button
+                type="button"
+                onClick={onOpenSteganography}
+                disabled={disabled || fileUploading || sending}
+                className="px-2.5 py-1 rounded-lg border border-neutral-800 bg-neutral-950 hover:bg-neutral-850 text-neutral-400 hover:text-indigo-300 text-[11px] font-medium transition-all shrink-0 flex items-center gap-1.5"
+                title="Esteganografía: Ocultar texto confidencial dentro de una imagen portadora"
+                aria-label="Esteganografía LSB"
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Esteganografía</span>
+              </button>
             )}
           </div>
 
-          {/* Send Button */}
-          <button
-            type="submit"
-            disabled={disabled || sending || !text.trim()}
-            className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-600 text-neutral-950 font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-emerald-400 shrink-0"
-            title="Enviar mensaje cifrado"
-            aria-label="Enviar mensaje cifrado"
-          >
-            {sending ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5 text-neutral-950" />
-            )}
-          </button>
+          {/* Bottom Tier: Attachment, Full-Width Textarea, Voice Note & Send */}
+          <div className="flex items-end gap-2">
+            {/* Hidden File Input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileChange}
+              className="hidden"
+              id="chat-file-upload"
+              disabled={disabled || fileUploading}
+            />
+
+            {/* Attachment Button */}
+            <label
+              htmlFor="chat-file-upload"
+              className={`p-2.5 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 text-neutral-300 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-emerald-500 shrink-0 flex items-center justify-center ${
+                disabled || fileUploading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              title="Adjuntar archivo o imagen cifrada (máx. 15MB)"
+              aria-label="Adjuntar archivo o imagen cifrada (máx. 15MB)"
+            >
+              {fileUploading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+              ) : (
+                <Paperclip className="w-5 h-5" />
+              )}
+            </label>
+
+            {/* Full-width Responsive Textarea */}
+            <div className="flex-1 min-w-0 relative">
+              <textarea
+                value={text}
+                onChange={handleTextChange}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  disabled
+                    ? 'Conectando a la sala...'
+                    : selectedBurn.ttl > 0
+                    ? `Mensaje con autodestrucción (${selectedBurn.label})...`
+                    : 'Escribe un mensaje seguro (Enter para enviar)...'
+                }
+                disabled={disabled || sending}
+                rows={1}
+                maxLength={MAX_MESSAGE_LENGTH}
+                aria-label="Mensaje seguro"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none disabled:opacity-50 transition-all max-h-32"
+              />
+              {text.length > 1500 && (
+                <span className="absolute right-3 bottom-2 text-[10px] text-neutral-400 font-mono">
+                  {text.length}/{MAX_MESSAGE_LENGTH}
+                </span>
+              )}
+            </div>
+
+            {/* Voice Note Button */}
+            <button
+              type="button"
+              onClick={() => setIsRecordingAudio(true)}
+              disabled={disabled || fileUploading || sending}
+              className={`p-2.5 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 text-neutral-300 hover:text-emerald-400 transition-colors shrink-0 flex items-center justify-center ${
+                disabled ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              title="Grabar nota de voz cifrada E2EE"
+              aria-label="Grabar nota de voz cifrada"
+            >
+              <Mic className="w-5 h-5" />
+            </button>
+
+            {/* Send Button */}
+            <button
+              type="submit"
+              disabled={disabled || sending || !text.trim()}
+              className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-600 text-neutral-950 font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-emerald-400 shrink-0"
+              title="Enviar mensaje cifrado"
+              aria-label="Enviar mensaje cifrado"
+            >
+              {sending ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5 text-neutral-950" />
+              )}
+            </button>
+          </div>
         </form>
       )}
     </footer>

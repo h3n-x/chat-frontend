@@ -1,145 +1,159 @@
 <div align="center">
 
-# 🔒 Chat Anónimo — Frontend (Client-Side E2EE v2.0)
+# 🔒 Chat Anónimo — Frontend Client & Mobile App (v2.5)
+### Cliente SPA Cero-Conocimiento en React 19 + TypeScript + WebCrypto Nativo + Capacitor Android
 
-![React](https://img.shields.io/badge/React-19.0+-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-6.0+-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-Strict_5.7+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![WebCrypto](https://img.shields.io/badge/WebCrypto-Native_AES--256--GCM-10B981?style=for-the-badge&logo=shield&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Vite 6](https://img.shields.io/badge/Vite-6.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-Strict_5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![TailwindCSS v4](https://img.shields.io/badge/TailwindCSS-v4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![WebCrypto](https://img.shields.io/badge/WebCrypto-AES--256--GCM_Native-10B981?style=for-the-badge&logo=shield&logoColor=white)
+![Android FLAG_SECURE](https://img.shields.io/badge/Android-FLAG__SECURE_Enforced-A4C639?style=for-the-badge&logo=android&logoColor=black)
+![Tests](https://img.shields.io/badge/Vitest-12%2F12_Passing-success?style=for-the-badge&logo=vitest)
 
-**Aplicación web cliente (SPA) con cifrado de extremo a extremo real ejecutado en el navegador, cero persistencia y diseño accesible WCAG 2.2 AA.**
+**Cliente web y móvil de ultra-privacidad con ejecución criptográfica aislada en memoria RAM, cero almacenamiento persistente, diseño accesible WCAG 2.2 AA e interfaz 100% responsiva.**
 
-[🏠 Repositorio Umbrella](https://github.com/h3n-x/chat-anonimo) • [🚀 Backend Blind Relay](https://github.com/h3n-x/chat-backend) • [🌐 Demo en Vivo](https://chat-zk.netlify.app)
+[🚀 Probar en Vivo](https://chat-zk.netlify.app) • [🏠 Repositorio Umbrella](https://github.com/h3n-x/chat-anonimo) • [⚙️ Backend Relay](https://github.com/h3n-x/chat-backend)
 
 </div>
 
 ---
 
-## 🛡️ Arquitectura Criptográfica del Cliente (v2.0)
+## 🎯 ¿Por qué este cliente es revolucionario?
 
-El cliente de Chat Anónimo v2.0 fue reescrito desde cero para erradicar las vulnerabilidades del diseño anterior (fallbacks débiles a XOR, generación de claves en el servidor y scripts rotos). Todas las operaciones criptográficas se ejecutan de manera aislada en la memoria RAM del navegador mediante la API nativa **`window.crypto.subtle`**.
+En la mayoría de aplicaciones de mensajería web ("end-to-end encrypted"), los clientes son vulnerables a una serie de vectores críticos:
+1. **Librerías criptográficas de terceros pesadas y no auditadas** que introducen fallos de canal lateral.
+2. **Almacenamiento inadvertido en disco:** Las claves o mensajes se escriben silenciosamente en `localStorage`, `IndexedDB` o caches del navegador.
+3. **Fuga de metadatos:** Al adjuntar una foto tomada con el móvil, se envían metadatos EXIF que contienen coordenadas GPS exactas, modelo de teléfono y fecha/hora.
+4. **Vulnerabilidad a inspección física y coacción:** Si una persona es forzada a desbloquear su dispositivo, el historial queda al descubierto.
 
-### 1. Primitivas Criptográficas Estándar
-- **Cifrado Simétrico Principal:** `AES-256-GCM` (NIST SP 800-38D).
-  - Claves de 256 bits generadas con CSPRNG del navegador (`crypto.getRandomValues`).
-  - Vector de Inicialización (IV): 12 bytes aleatorios únicos por cada mensaje o archivo.
-  - Tag de Autenticación: 128 bits para garantizar integridad e impedir modificaciones.
-- **Autenticación de Datos Asociados (AAD):** Cada operación AES-GCM vincula criptográficamente el identificador de la sala:
-  $$\text{AAD} = \text{UTF-8}(\text{"room:"} + room\_id)$$
-  *Cualquier intento de retransmitir o inyectar un mensaje capturado en otra sala provocará un fallo inmediato en la verificación del tag.*
-- **Acuerdo de Claves Asimétrico:** `ECDH (P-256)` efímero para el intercambio de claves entre clientes cuando se unen mediante código de sala.
-- **Verificación Anti-MITM Manual (Fingerprint SAS):** Código de autenticación corto de 4 palabras (*Short Authentication String*) derivado de $\text{SHA-256}(\text{RoomKey})$.
-  > [!IMPORTANT]
-  > **La verificación SAS NO es automática:** Ningún navegador ni protocolo criptográfico puede determinar por sí mismo si la clave proviene del interlocutor legítimo o de un atacante activo en el medio (MITM). La seguridad contra MITM depende **estrictamente de que los usuarios comparen estas 4 palabras por un canal fuera de banda** (llamada de voz o en persona).
-  > 
-  > En la interfaz v2.0, la sala presenta un modal interactivo bloqueante (`SasVerificationModal`):
-  > 1. **Coinciden — Activar Chat:** Desbloquea el canal de texto y archivos solo tras la validación humana explícita.
-  > 2. **No Coinciden — Abortar:** Purga de inmediato la clave simétrica de la memoria RAM, cierra la conexión WebSocket y expulsa al usuario de la sala de forma preventiva.
+### La Solución de Chat Anónimo v2.5:
+Este cliente ejecuta **100% de la criptografía y el tratamiento de medios en la memoria RAM del navegador**:
+* **Cero Persistencia:** No hay `localStorage`, ni cookies, ni Service Workers que guarden mensajes.
+* **Fail-Closed:** Si `window.crypto.subtle` no está presente, la aplicación se bloquea de forma preventiva.
+* **Anti-Forense Integrado:** Cuenta con modo coacción, borrado de portapapeles, esteganografía y distorsión de voz.
 
 ---
 
-## 🔑 Métodos de Conexión a Salas
+## 📱 Experiencia Móvil & Interfaz Responsiva Adaptativa
 
-### Método A: Enlace Directo Zero-Knowledge (Recomendado)
-- El anfitrión crea la sala y genera la `RoomKey` localmente.
-- Se genera un enlace que incluye la clave simétrica en el **Hash Fragment** de la URL:
-  ```text
-  https://chat-zk.netlify.app/#room=K7M9P2&key=base64_256bit_key
-  ```
-- **Privacidad RFC 3986:** Por especificación del protocolo HTTP, los fragmentos después de `#` **jamás se envían al servidor** en las peticiones HTTP ni en cabeceras `Referer`. El servidor nunca tiene visibilidad de la clave.
+La interfaz ha sido diseñada para operar fluidamente tanto en pantallas táctiles móviles de 360px como en monitores ultra-wide:
 
-### Método B: Unión por Código + Handshake ECDH
-- El participante ingresa el código `K7M9P2`.
-- Genera un par de claves efímero ECDH (`sk_Bob`, `pk_Bob`) y solicita la clave de la sala vía WebSocket.
-- Un participante existente en la sala recibe la petición, deriva una clave de envoltura (`K_wrap`), cifra la `RoomKey` con AES-GCM y la envía de vuelta.
-- El servidor solo actúa como enrutador ciego (*Blind Relay*) del handshake.
+### 1. Barra de Entrada en Dos Niveles (Anti-Aplastamiento)
+* **Nivel Superior (Ribbon de Seguridad Efímera):** Píldoras compactas e interactivas con estados visuales claros:
+  - `[🔥 Destruir: Off / 10s / 30s / 1m / 5m]` (autodestrucción TTL).
+  - `[👁️ Ver 1 vez (Activo / Inactivo)]` (medios efímeros con autodestrucción).
+  - `[🖼️ Esteganografía]` (abrir modulador de imágenes portadoras).
+* **Nivel Inferior (Entrada Principal):**
+  - Botón de adjuntos `[📎]`.
+  - Área de texto con **ancho completo expandible (`flex-1`)** que nunca se comprime en teléfonos pequeños.
+  - Grabador de notas de voz `[🎤]`.
+  - Botón de envío esmeralda `[➤]`.
 
----
+### 2. Sistema de Reacciones Táctiles en Móvil
+* **Reacciones Efímeras Cifradas:** Emojis seleccionables (`👍`, `❤️`, `🔥`, `🤫`, `👁️`).
+* **Soporte Táctil Nativo:** En dispositivos móviles, pulsar sobre el mensaje o el botón de carita `Smile` despliega un menú flotante con soporte táctil optimizado (sin depender de pseudo-clases `:hover` de ratón).
+* **Badges Agrupados:** Conteo de reacciones en tiempo real con botón `+` para reaccionar rápidamente.
 
-## 🚨 Política de No-Degradación ("Fail-Closed")
+### 3. Encabezado Inteligente con Menú de Herramientas Móvil
+* En pantallas de escritorio, muestra todas las herramientas en línea.
+* En pantallas móviles reducidas (`< sm`), sintetiza la barra en:
+  - Código de sala `[WDQDJ7]` y botón `[QR / Clave]`.
+  - Botón de pánico `[🔥 Pánico]`.
+  - Menú de 3 puntos `[⋯]` que despliega una hoja flotante con:
+    - 🔍 *Buscar en memoria RAM* (`Ctrl + F`).
+    - 👁️ *Modo Espía* (difumina mensajes para evitar miradas indiscretas).
+    - 📡 *Camuflaje de Tráfico Señuelo* (paquetes periódicos).
+    - 🔊 *Silenciar / Activar Sonidos sintéticos*.
+    - 🧅 *Configuración de Red Tor & Relay*.
+    - 🚪 *Abandonar Sala*.
 
-- Si la aplicación se ejecuta en un contexto no seguro (HTTP sin SSL) o en un navegador que no soporte `window.crypto.subtle`:
-  - Se bloquea la interfaz de forma no descartable mediante el componente **`FailClosedBanner`**.
-  - **No existe modo de degradación ni algoritmos alternativos:** Se eliminó todo código de fallback a XOR o generadores pseudoaleatorios débiles (`Math.random`).
-
----
-
-## ⚠️ Límites del Modelo de Amenazas en el Cliente
-
-> [!CAUTION]
-> El cifrado de extremo a extremo en el navegador protege contra intermediarios de red y servidores curiosos, pero **no puede proteger contra las siguientes condiciones**:
-> 1. **Malware o extensiones maliciosas:** Cualquier extensión instalada en el navegador con acceso a la pestaña o software espía a nivel del sistema operativo puede leer las variables de estado en memoria o el DOM renderizado.
-> 2. **Omisión de la verificación SAS:** Si los usuarios no comparan de viva voz o presencialmente el código de 4 palabras del modal bloqueante, no existe garantía contra un intermediario activo en la red (MITM) que suplante las claves públicas ECDH.
-> 3. **Compartición insegura de enlaces:** Transmitir el enlace directo `#room=...&key=...` por canales inseguros (SMS, correo sin cifrar) expone la clave de la sala.
-> 4. **Fuga por memoria local prolongada:** Las claves viven en la memoria RAM del navegador mientras la pestaña permanezca abierta; cerrar o salir de la sala purga el estado.
-
----
-
-## 📁 Transferencia Segura de Archivos
-
-1. **Cifrado en Memoria:** El archivo se lee como `ArrayBuffer`, se empaqueta con su nombre original y tipo MIME, y se cifra con `AES-256-GCM` antes de enviarse.
-2. **Subida en Streaming:** El archivo cifrado se transmite mediante HTTP POST en bloques de 64 KB hacia el relay con un tope estricto de **15 MB**.
-3. **Descarga y Descifrado Local:** El receptor descarga el blob cifrado `.enc` opaco y lo descifra en memoria local, creando un Object URL temporal sin tocar el disco del servidor.
+### 4. Panel de Seguridad Colapsable
+* Muestra de un vistazo el estado de cifrado `E2EE: AES-256-GCM`, latencia RTT con el relay (`● 24 ms`), número de participantes y alerta parpadeante de **Verificación SAS** si no se ha validado contra ataques MITM.
+* En móviles, se contrae en una sola línea y puede desplegarse con un toque para auditar el fingerprint criptográfico de 4 palabras.
 
 ---
 
-## 🧪 Pruebas Unitarias del Módulo Criptográfico
+## 🛡️ Catálogo de Módulos & Funcionalidades de Seguridad
 
-La suite de pruebas con **Vitest** valida todas las primitivas criptográficas directamente contra la implementación de WebCrypto:
+### 🎙️ Distorsión Biométrica de Voz (`src/utils/voiceScrambler.ts`)
+* Utiliza nodos `BiquadFilterNode`, `DelayNode` y `GainNode` de la Web Audio API nativa.
+* Modula formantes y pitch antes de codificar el audio a WebM:
+  - **Voz Grave / Deep Pitch:** Desplaza formantes hacia frecuencias bajas.
+  - **Voz Aguda / Helio:** Aumenta las frecuencias superiores.
+  - **Cyborg / Robótica:** Introduce modulación en anillo y cortes metálicos.
+  - **Susurro:** Filtra las frecuencias vocálicas fundamentales dejando únicamente la banda aérea.
+* Impide la identificación por huella vocal forense o reconocimiento acústico automático.
+
+### 🧹 Depurador Profundo de Metadatos (`src/utils/fileSanitizer.ts`)
+* Re-dibuja imágenes entrantes en un `<canvas>` sin contexto de metadatos, erradicando segmentos EXIF, coordenadas de geolocalización GPS, número de serie del sensor de cámara y timestamps.
+* Reemplaza el nombre de archivo con un hash `SHA-256(timestamp + random)` para evitar fuga de información por nombres de archivo (`IMG_20260918_WA0001.jpg`).
+
+### 👁️ Medios Efímeros "Ver Una Sola Vez" (`src/components/ViewOnceModal.tsx`)
+* Temporizador visual de **7 segundos**.
+* Protección anti-captura: desenfoca la pantalla si la ventana o pestaña pierde el foco.
+* Al cerrar o expirar, revoca inmediatamente el blob en RAM con `URL.revokeObjectURL()` y marca el mensaje como calcinado irreversiblemente.
+
+### 🎭 Modo Coacción y Sala Señuelo (`src/components/DecoyRoom.tsx`)
+* Activación mediante PIN **`9999`**, comando **`/duress`** o hotkey **`Ctrl + Shift + D`**.
+* Ejecuta un borrado destructivo de todas las claves en memoria y monta una sala falsa de estudio universitario (*"Grupo de Estudio: Redes & Sistemas"*) con chat funcional inocente para despistar a cualquier extorsionador.
+
+### 📋 Portapapeles con Auto-Destrucción (`src/utils/secureClipboard.ts`)
+* Cada vez que el usuario copia una clave de sala, enlace o frase mnemónica, se programa una tarea que sobreescribe el portapapeles del sistema operativo con una cadena vacía tras **30 segundos**.
+
+### 🖼️ Esteganografía de Imagen LSB (`src/utils/steganography.ts`)
+* Inyecta el marcador mágico `ZKST`, longitud de 32 bits y carga útil UTF-8 en los bits menos significativos de los canales RGB de imágenes PNG sin pérdidas.
+* Permite ocultar textos secretos dentro de fotos digitales comunes y compartirlas o revelarlas desde el modal interactivo.
+
+### 🔤 Frases Mnemónicas BIP-39 (`src/utils/bip39.ts`)
+* Implementa el estándar Bitcoin BIP-39 con diccionario de 2048 palabras en español/inglés.
+* Codifica la clave simétrica de 256 bits en **24 palabras legibles** con checksum SHA-256 de 8 bits para verificación y respaldo resistente a fallos humanos.
+
+### 📱 Aplicación Android Nativa con `FLAG_SECURE` (`android/`)
+* Proyecto Capacitor con configuración nativa en `MainActivity.java`.
+* **`FLAG_SECURE` a Nivel de Sistema Operativo:** Bloquea capturas de pantalla físicas (`Power + Bajar Volumen`), bloquea grabaciones de pantalla de malware y oculta la vista previa en el selector de tareas del teléfono.
+* Suplanta el User-Agent del WebView a una firma estandarizada común para anonimizar el modelo del teléfono.
+
+---
+
+## 🧪 Pruebas Unitarias del Cliente (Vitest)
+
+El frontend incluye 12 pruebas unitarias automatizadas que garantizan la corrección de los algoritmos:
 
 ```bash
-# Ejecutar pruebas unitarias de criptografía
-npm run test
+cd chat-frontend
+npm test -- --run
 ```
 
-### Pruebas Validadas:
-- Generación, exportación e importación de claves `AES-256-GCM`.
-- Cifrado y descifrado de mensajes con validación estricta de AAD (detección de salas falsas o manipulación).
-- Acuerdo de claves Diffie-Hellman en curva elíptica (ECDH P-256) y key wrapping/unwrapping.
-- Generación consistente del fingerprint Short Authentication String (SAS).
+```text
+ ✓ src/utils/fileSanitizer.test.ts (3 tests)
+ ✓ src/utils/bip39.test.ts (4 tests)
+ ✓ src/crypto/crypto.test.ts (5 tests)
+
+ Test Files  3 passed (3)
+      Tests  12 passed (12)
+```
 
 ---
 
-## 🛠️ Instalación y Desarrollo Local
-
-### Requisitos
-- Node.js 18+ o 20+
-- npm
+## 🚀 Instalación y Ejecución
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/h3n-x/chat-frontend.git
+# 1. Instalar dependencias
 cd chat-frontend
-
-# 2. Instalar dependencias limpias
 npm install
 
-# 3. Iniciar servidor de desarrollo con Vite
+# 2. Servidor de desarrollo
 npm run dev
 
-# 4. Compilar para producción (typecheck estricto + build)
+# 3. Compilación de producción (TypeScript estricto + Vite)
 npm run build
 
-# 5. Vista previa del build de producción
-npm run preview
+# 4. Sincronizar con el proyecto nativo de Android
+npx cap sync android
 ```
-
-### Variables de Entorno (Opcional)
-Crea un archivo `.env` o `.env.local` si deseas apuntar a un backend personalizado:
-```env
-VITE_API_URL=http://localhost:8000
-VITE_WS_URL=ws://localhost:8000
-```
-
----
-
-## ♿ Accesibilidad (WCAG 2.2 AA)
-- Roles ARIA semánticos (`role="log"`, `role="alert"`, `aria-live`).
-- Ratios de contraste de color superiores a 4.5:1 en modo oscuro.
-- Foco visible navegable por teclado en todos los controles interactivos.
 
 ---
 
 ## 📜 Licencia
-Distribuido bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
+Distribuido bajo la Licencia **MIT**.

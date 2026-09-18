@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { ShieldCheck, ShieldAlert, Copy, Check, Users, KeyRound, Activity, Globe } from 'lucide-react';
+import {
+  ShieldCheck,
+  ShieldAlert,
+  Copy,
+  Check,
+  Users,
+  KeyRound,
+  Activity,
+  Globe,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { copyWithAutoScrub } from '../utils/secureClipboard';
 
 interface SecurityBadgeProps {
@@ -20,6 +31,7 @@ export const SecurityBadge: React.FC<SecurityBadgeProps> = ({
   onOpenTorSettings,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [isExpandedMobile, setIsExpandedMobile] = useState(false);
 
   const handleCopy = async () => {
     if (!fingerprint) return;
@@ -33,17 +45,93 @@ export const SecurityBadge: React.FC<SecurityBadgeProps> = ({
   return (
     <section
       aria-label="Panel de Seguridad Criptográfica"
-      className="bg-neutral-900/90 border border-neutral-800 rounded-xl p-3 text-xs backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shadow-inner"
+      className="bg-neutral-900/90 border border-neutral-800 rounded-xl p-2.5 sm:p-3 text-xs backdrop-blur-md shadow-inner transition-all"
     >
-      {/* Encryption Details */}
-      <div className="flex items-center gap-2">
-        <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 font-medium">
-          <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
-          <span>E2EE: AES-256-GCM</span>
-        </span>
-        <span className="text-neutral-400 hidden sm:inline">•</span>
-        <span className="text-neutral-400 hidden sm:inline">Cero-Persistencia</span>
+      {/* Mobile Header Row (always visible) / Desktop unified row */}
+      <div className="flex items-center justify-between gap-2">
+        {/* Encryption Chip */}
+        <div className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 px-2 py-0.5 sm:py-1 rounded-md bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 font-medium text-[11px] sm:text-xs">
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>E2EE: AES-256-GCM</span>
+          </span>
+          <span className="text-neutral-500 hidden sm:inline">•</span>
+          <span className="text-neutral-400 hidden sm:inline text-[11px]">Cero-Persistencia</span>
+        </div>
+
+        {/* Right Stats: RTT, Peers and Mobile Toggle */}
+        <div className="flex items-center gap-1.5">
+          {/* Unverified SAS alert on mobile */}
+          {!isSasVerified && (
+            <button
+              onClick={onOpenSasModal}
+              className="sm:hidden flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-950/80 border border-amber-600 text-amber-300 animate-pulse"
+              title="Verificar SAS"
+            >
+              <ShieldAlert className="w-3 h-3" />
+              <span>Verificar</span>
+            </button>
+          )}
+
+          {/* RTT Ping Latency */}
+          {rttMs !== undefined && rttMs !== null && (
+            <div
+              className="flex items-center gap-1 px-1.5 py-0.5 sm:py-1 rounded-md bg-neutral-950/60 border border-neutral-800/80 text-[10px] sm:text-[11px]"
+              title={`Latencia RTT con el Blind Relay: ${rttMs} ms`}
+            >
+              <Activity
+                className={`w-3 h-3 shrink-0 ${
+                  rttMs < 120
+                    ? 'text-emerald-400'
+                    : rttMs < 300
+                    ? 'text-amber-400'
+                    : 'text-red-400'
+                }`}
+              />
+              <span
+                className={`font-mono ${
+                  rttMs < 120
+                    ? 'text-emerald-300'
+                    : rttMs < 300
+                    ? 'text-amber-300'
+                    : 'text-red-300'
+                }`}
+              >
+                {rttMs} ms
+              </span>
+            </div>
+          )}
+
+          {/* Live Peer Count */}
+          <div className="flex items-center gap-1 text-neutral-400 bg-neutral-950/60 px-1.5 py-0.5 sm:py-1 rounded-md border border-neutral-800/80 text-[10px] sm:text-[11px]">
+            <Users className="w-3 h-3 text-neutral-400 shrink-0" aria-hidden="true" />
+            <span>{participantCount}</span>
+            <span className="hidden sm:inline">{participantCount === 1 ? 'peer' : 'peers'}</span>
+          </div>
+
+          {/* Mobile Expand / Collapse Chevron */}
+          <button
+            type="button"
+            onClick={() => setIsExpandedMobile((prev) => !prev)}
+            className="sm:hidden p-1 rounded-md bg-neutral-950/60 border border-neutral-800 text-neutral-400 hover:text-neutral-200"
+            title={isExpandedMobile ? 'Contraer panel' : 'Ver detalles criptográficos'}
+            aria-label="Alternar detalles de seguridad"
+          >
+            {isExpandedMobile ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Expanded Details Section: Always visible on sm+, toggleable on mobile */}
+      <div
+        className={`${
+          isExpandedMobile ? 'flex' : 'hidden'
+        } sm:flex flex-wrap items-center justify-between gap-2.5 pt-2 mt-2 border-t border-neutral-800/60`}
+      >
 
       {/* SAS Fingerprint & MITM Verification */}
       {fingerprint && (
@@ -95,54 +183,21 @@ export const SecurityBadge: React.FC<SecurityBadgeProps> = ({
         </div>
       )}
 
-      {/* Right Stats: RTT Latency, Tor Proxy, and Peer Count */}
-      <div className="flex items-center gap-2">
-        {/* RTT Ping Latency */}
-        {rttMs !== undefined && rttMs !== null && (
-          <div
-            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-neutral-950/60 border border-neutral-800/80 text-[11px]"
-            title={`Latencia RTT con el Blind Relay: ${rttMs} ms`}
-          >
-            <Activity
-              className={`w-3 h-3 ${
-                rttMs < 120
-                  ? 'text-emerald-400'
-                  : rttMs < 300
-                  ? 'text-amber-400'
-                  : 'text-red-400'
-              }`}
-            />
-            <span
-              className={`font-mono ${
-                rttMs < 120
-                  ? 'text-emerald-300'
-                  : rttMs < 300
-                  ? 'text-amber-300'
-                  : 'text-red-300'
-              }`}
+        {/* Tor / Proxy Settings & Security Level */}
+        <div className="flex items-center gap-2">
+          {onOpenTorSettings && (
+            <button
+              onClick={onOpenTorSettings}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-950/80 hover:bg-neutral-800 border border-neutral-800 hover:border-purple-500/60 text-neutral-300 hover:text-purple-300 text-[11px] transition-colors"
+              title="Configuración de Red Tor & Blind Relay"
             >
-              {rttMs} ms
-            </span>
-          </div>
-        )}
+              <Globe className="w-3.5 h-3.5 text-purple-400" />
+              <span>Red Tor / Proxy</span>
+            </button>
+          )}
 
-        {/* Tor / Proxy Settings */}
-        {onOpenTorSettings && (
-          <button
-            onClick={onOpenTorSettings}
-            className="flex items-center gap-1 px-2 py-1 rounded-md bg-neutral-950/60 hover:bg-neutral-800/80 border border-neutral-800/80 text-neutral-400 hover:text-purple-300 text-[11px] transition-colors"
-            title="Configuración de Red Tor & Blind Relay"
-          >
-            <Globe className="w-3 h-3 text-purple-400" />
-            <span className="hidden md:inline">Tor/Relay</span>
-          </button>
-        )}
-
-        {/* Live Peer Count */}
-        <div className="flex items-center gap-1.5 text-neutral-400 bg-neutral-950/60 px-2 py-1 rounded-md border border-neutral-800/80">
-          <Users className="w-3.5 h-3.5 text-neutral-400" aria-hidden="true" />
-          <span>
-            {participantCount} {participantCount === 1 ? 'participante' : 'participantes'}
+          <span className="text-neutral-500 text-[10px] hidden md:inline">
+            Aislamiento RAM WebCrypto • No-Log
           </span>
         </div>
       </div>
