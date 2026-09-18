@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Chat Anónimo ZK</string>
+    <string name="title_activity_main">Chat Anónimo ZK</string>
+    <string name="package_name">app.netlify.chat_zk.app</string>
+    <string name="custom_url_scheme">app.netlify.chat_zk.app</string>
+</resources>
