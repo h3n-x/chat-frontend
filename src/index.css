@@ -5,3 +5,11 @@
     color-scheme: dark;
   }
 }
+
+/* Anti-exfiltration: Neutralize Ctrl+P and browser print to PDF */
+@media print {
+  html, body {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

@@ -1,5 +1,13 @@
-import React, { useEffect, useRef } from 'react';
-import { ShieldCheck, AlertTriangle, Image as ImageIcon, Volume2, Loader2, Maximize2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ShieldCheck,
+  AlertTriangle,
+  Image as ImageIcon,
+  Volume2,
+  Loader2,
+  Maximize2,
+  Eye,
+} from 'lucide-react';
 import { ChatMessage } from '../types';
 import { FileAttachment } from './FileAttachment';
 import { BurnCountdown } from './BurnCountdown';
@@ -11,6 +19,7 @@ interface MessageListProps {
   onLoadMedia: (fileId: string, mimeType: string, messageId: string) => Promise<void>;
   onOpenLightbox: (imageUrl: string, imageName: string) => void;
   isPeerTyping?: boolean;
+  isSpyMode?: boolean;
 }
 
 function formatTime(timestamp: number): string {
@@ -25,8 +34,16 @@ export const MessageList: React.FC<MessageListProps> = ({
   onLoadMedia,
   onOpenLightbox,
   isPeerTyping = false,
+  isSpyMode = false,
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [revealedId, setRevealedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleReset = () => setRevealedId(null);
+    window.addEventListener('blur', handleReset);
+    return () => window.removeEventListener('blur', handleReset);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -83,6 +100,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 
         const isImage = msg.file && msg.file.mime_type.startsWith('image/');
         const isAudio = msg.is_audio || (msg.file && msg.file.mime_type.startsWith('audio/'));
+        const isRevealed = !isSpyMode || revealedId === msg.id;
 
         return (
           <div
@@ -110,103 +128,124 @@ export const MessageList: React.FC<MessageListProps> = ({
 
             {/* Bubble */}
             <div
-              className={`max-w-md md:max-w-lg p-3 rounded-2xl text-sm leading-relaxed shadow-md ${
+              onPointerDown={() => isSpyMode && setRevealedId(msg.id)}
+              onPointerUp={() => isSpyMode && setRevealedId(null)}
+              onPointerLeave={() => isSpyMode && setRevealedId(null)}
+              onPointerCancel={() => isSpyMode && setRevealedId(null)}
+              className={`max-w-md md:max-w-lg p-3 rounded-2xl text-sm leading-relaxed shadow-md transition-all ${
+                isSpyMode ? 'cursor-pointer select-none active:scale-[0.99]' : ''
+              } ${
                 msg.is_self
                   ? 'bg-emerald-600/20 text-neutral-100 border border-emerald-500/30 rounded-tr-sm'
                   : 'bg-neutral-900 text-neutral-200 border border-neutral-800 rounded-tl-sm'
               }`}
             >
-              {/* Message text */}
-              {(!msg.is_audio || msg.text !== '🎤 Nota de voz cifrada') && (
-                <p className="whitespace-pre-wrap break-words">{msg.text}</p>
-              )}
+              <div
+                style={{
+                  filter: isRevealed ? 'none' : 'blur(9px)',
+                  transition: 'filter 0.15s ease-out',
+                }}
+              >
+                {/* Message text */}
+                {(!msg.is_audio || msg.text !== '🎤 Nota de voz cifrada') && (
+                  <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                )}
 
-              {/* In-Memory Audio Voice Player */}
-              {isAudio && (
-                <div className="mt-2 pt-1 border-t border-neutral-800/60">
-                  {msg.audio_blob_url ? (
-                    <div className="flex flex-col gap-1.5 py-1">
-                      <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
-                        <Volume2 className="w-4 h-4 shrink-0" />
-                        <span>Nota de voz cifrada {msg.audio_duration ? `(${msg.audio_duration}s)` : ''}</span>
+                {/* In-Memory Audio Voice Player */}
+                {isAudio && (
+                  <div className="mt-2 pt-1 border-t border-neutral-800/60">
+                    {msg.audio_blob_url ? (
+                      <div className="flex flex-col gap-1.5 py-1">
+                        <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
+                          <Volume2 className="w-4 h-4 shrink-0" />
+                          <span>Nota de voz cifrada {msg.audio_duration ? `(${msg.audio_duration}s)` : ''}</span>
+                        </div>
+                        <audio
+                          controls
+                          src={msg.audio_blob_url}
+                          className="w-full h-8 rounded-lg outline-none max-w-xs"
+                        />
                       </div>
-                      <audio
-                        controls
-                        src={msg.audio_blob_url}
-                        className="w-full h-8 rounded-lg outline-none max-w-xs"
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() =>
-                        msg.file && onLoadMedia(msg.file.file_id, msg.file.mime_type, msg.id)
-                      }
-                      disabled={msg.file_downloading}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-xs text-emerald-400 font-medium transition-colors"
-                    >
-                      {msg.file_downloading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Volume2 className="w-4 h-4" />
-                      )}
-                      <span>
-                        {msg.file_downloading ? 'Descifrando audio...' : '▶ Cargar nota de voz cifrada'}
-                      </span>
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* In-Memory Image Thumbnail Preview */}
-              {isImage && (
-                <div className="mt-2.5">
-                  {msg.file_blob_url ? (
-                    <div className="relative group rounded-xl overflow-hidden border border-neutral-800 bg-neutral-950 max-w-xs cursor-pointer shadow-inner">
-                      <img
-                        src={msg.file_blob_url}
-                        alt={msg.file?.file_name || 'Imagen cifrada'}
-                        className="max-h-60 w-auto object-cover rounded-xl transition-transform group-hover:scale-[1.02]"
-                        onClick={() => onOpenLightbox(msg.file_blob_url!, msg.file?.file_name || 'Imagen')}
-                      />
-                      <div
-                        onClick={() => onOpenLightbox(msg.file_blob_url!, msg.file?.file_name || 'Imagen')}
-                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                    ) : (
+                      <button
+                        onClick={() =>
+                          msg.file && onLoadMedia(msg.file.file_id, msg.file.mime_type, msg.id)
+                        }
+                        disabled={msg.file_downloading}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-xs text-emerald-400 font-medium transition-colors"
                       >
-                        <div className="p-2 rounded-full bg-neutral-900/80 backdrop-blur-sm border border-white/20">
-                          <Maximize2 className="w-4 h-4" />
+                        {msg.file_downloading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Volume2 className="w-4 h-4" />
+                        )}
+                        <span>
+                          {msg.file_downloading ? 'Descifrando audio...' : '▶ Cargar nota de voz cifrada'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* In-Memory Image Thumbnail Preview */}
+                {isImage && (
+                  <div className="mt-2.5">
+                    {msg.file_blob_url ? (
+                      <div className="relative group rounded-xl overflow-hidden border border-neutral-800 bg-neutral-950 max-w-xs cursor-pointer shadow-inner">
+                        <img
+                          src={msg.file_blob_url}
+                          alt={msg.file?.file_name || 'Imagen cifrada'}
+                          className="max-h-60 w-auto object-cover rounded-xl transition-transform group-hover:scale-[1.02]"
+                          onClick={() => onOpenLightbox(msg.file_blob_url!, msg.file?.file_name || 'Imagen')}
+                        />
+                        <div
+                          onClick={() => onOpenLightbox(msg.file_blob_url!, msg.file?.file_name || 'Imagen')}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                        >
+                          <div className="p-2 rounded-full bg-neutral-900/80 backdrop-blur-sm border border-white/20">
+                            <Maximize2 className="w-4 h-4" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() =>
-                        msg.file && onLoadMedia(msg.file.file_id, msg.file.mime_type, msg.id)
-                      }
-                      disabled={msg.file_downloading}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-xs text-emerald-400 font-medium transition-colors"
-                    >
-                      {msg.file_downloading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <ImageIcon className="w-4 h-4" />
-                      )}
-                      <span>
-                        {msg.file_downloading ? 'Descifrando imagen en RAM...' : '👁️ Ver vista previa de imagen'}
-                      </span>
-                    </button>
-                  )}
-                </div>
-              )}
+                    ) : (
+                      <button
+                        onClick={() =>
+                          msg.file && onLoadMedia(msg.file.file_id, msg.file.mime_type, msg.id)
+                        }
+                        disabled={msg.file_downloading}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-xs text-emerald-400 font-medium transition-colors"
+                      >
+                        {msg.file_downloading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <ImageIcon className="w-4 h-4" />
+                        )}
+                        <span>
+                          {msg.file_downloading ? 'Descifrando imagen en RAM...' : '👁️ Ver vista previa de imagen'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
 
-              {/* Regular File Download (Non-image / Non-voice) */}
-              {msg.file && !isImage && !msg.is_audio && (
-                <FileAttachment
-                  fileId={msg.file.file_id}
-                  fileName={msg.file.file_name}
-                  fileSize={msg.file.file_size}
-                  mimeType={msg.file.mime_type}
-                  onDownload={onDownloadFile}
-                />
+                {/* Regular File Download (Non-image / Non-voice) */}
+                {msg.file && !isImage && !msg.is_audio && (
+                  <FileAttachment
+                    fileId={msg.file.file_id}
+                    fileName={msg.file.file_name}
+                    fileSize={msg.file.file_size}
+                    mimeType={msg.file.mime_type}
+                    onDownload={onDownloadFile}
+                  />
+                )}
+              </div>
+
+              {/* Spy Mode Reveal Hint */}
+              {isSpyMode && !isRevealed && (
+                <div className="flex items-center justify-center gap-1.5 pt-1 text-[10px] text-emerald-400/90 font-mono select-none">
+                  <Eye className="w-3 h-3 animate-pulse" />
+                  <span>Mantén presionado para revelar</span>
+                </div>
               )}
             </div>
           </div>

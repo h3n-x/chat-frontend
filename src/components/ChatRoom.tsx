@@ -10,6 +10,8 @@ import {
   Volume2,
   VolumeX,
   Flame,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { SecurityBadge } from './SecurityBadge';
 import { SasVerificationModal } from './SasVerificationModal';
@@ -148,6 +150,21 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
     setIsMuted(next);
   };
 
+  const [isSpyMode, setIsSpyMode] = useState<boolean>(() => {
+    if (typeof localStorage === 'undefined') return false;
+    return localStorage.getItem('chat_zk_spy_mode') === 'true';
+  });
+
+  const handleToggleSpyMode = () => {
+    setIsSpyMode((prev) => {
+      const next = !prev;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('chat_zk_spy_mode', next ? 'true' : 'false');
+      }
+      return next;
+    });
+  };
+
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
@@ -216,6 +233,29 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
               <span className="hidden md:inline">QR</span>
             </button>
           )}
+
+          {/* Spy Mode / Hold to Reveal Toggle */}
+          <button
+            onClick={handleToggleSpyMode}
+            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all flex items-center gap-1 text-xs font-semibold ${
+              isSpyMode
+                ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-400 shadow-sm'
+                : 'bg-neutral-800 hover:bg-neutral-750 border-transparent text-neutral-400 hover:text-white'
+            }`}
+            title={
+              isSpyMode
+                ? 'Modo Espía ACTIVO (mensajes difuminados, mantener presionado para leer)'
+                : 'Activar Modo Espía (anti-captura y hombro: difumina mensajes hasta mantener presionado)'
+            }
+            aria-label="Alternar Modo Espía"
+          >
+            {isSpyMode ? (
+              <EyeOff className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <Eye className="w-4 h-4 text-neutral-400" />
+            )}
+            <span className="hidden md:inline">Espía</span>
+          </button>
 
           {/* Sound Synthesizer Mute Toggle */}
           <button
@@ -352,6 +392,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
         onLoadMedia={onLoadMedia}
         onOpenLightbox={(url, name) => setLightboxImage({ url, name })}
         isPeerTyping={isPeerTyping}
+        isSpyMode={isSpyMode}
       />
 
       {/* Message Input */}
