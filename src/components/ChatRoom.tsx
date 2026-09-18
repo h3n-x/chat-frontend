@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   LogOut,
-  Share2,
-  Check,
   AlertCircle,
   Loader2,
   KeyRound,
@@ -85,7 +83,6 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   onRejectSasMatch,
   onOpenSasModal,
 }) => {
-  const [copiedLink, setCopiedLink] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(isSoundMuted());
   const [isBlurred, setIsBlurred] = useState(false);
@@ -148,12 +145,6 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   }, [onNuke]);
 
   const shareUrl = `${window.location.origin}/#room=${roomId}&key=${encodeURIComponent(roomKeyBase64)}`;
-
-  const handleShareLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
-  };
 
   const handleToggleSound = () => {
     const next = toggleSoundMuted();
@@ -307,28 +298,6 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
               <Volume2 className="w-4 h-4 text-emerald-400" />
             )}
           </button>
-
-          {/* Share Direct Link */}
-          {roomKeyBase64 && (
-            <button
-              onClick={handleShareLink}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              title="Copiar enlace seguro con clave en hash fragment"
-              aria-label="Compartir enlace seguro de la sala"
-            >
-              {copiedLink ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-300 text-xs">Copiado</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Enlace</span>
-                </>
-              )}
-            </button>
-          )}
 
           {/* Panic / Nuke Button */}
           <button
