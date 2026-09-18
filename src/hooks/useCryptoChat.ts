@@ -29,6 +29,8 @@ import {
   playLeaveSound,
   playNukeSound,
 } from '../utils/audio';
+import { stripImageMetadata, generateAnonymousFilename } from '../utils/fileSanitizer';
+import { VoiceEffect } from '../utils/voiceScrambler';
 
 const ANONYMOUS_ADJECTIVES = ['Sombra', 'Fantasma', 'Cripto', 'Espectro', 'Sigilo', 'Silencio', 'Vórtice'];
 const ACCENT_COLORS = ['#10B981', '#06B6D4', '#8B5CF6', '#F59E0B', '#EC4899', '#3B82F6'];
@@ -52,8 +54,23 @@ export function useCryptoChat() {
   const [isSasVerified, setIsSasVerified] = useState<boolean>(false);
   const [isSasModalOpen, setIsSasModalOpen] = useState<boolean>(false);
   const [isPeerTyping, setIsPeerTyping] = useState<boolean>(false);
+  const [isDecoyTrafficActive, setIsDecoyTrafficActive] = useState<boolean>(() => {
+    if (typeof localStorage === 'undefined') return false;
+    return localStorage.getItem('chat_zk_decoy_traffic') === 'true';
+  });
   const hasAutoOpenedSasRef = useRef<boolean>(false);
   const typingTimeoutRef = useRef<number | null>(null);
+  const nukeRoomRef = useRef<(() => void) | null>(null);
+
+  const toggleDecoyTraffic = useCallback(() => {
+    setIsDecoyTrafficActive((prev) => {
+      const next = !prev;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('chat_zk_decoy_traffic', next ? 'true' : 'false');
+      }
+      return next;
+    });
+  }, []);
 
   // In-memory ECDH handshake state
   const handshakeRef = useRef<ECDHKeyPair | null>(null);
@@ -80,6 +97,19 @@ export function useCryptoChat() {
             frame.payload,
             frame.room_id
           );
+
+          // 1.1 Silent drop for decoy chaffing traffic frames
+          if (plaintext.is_decoy) {
+            return;
+          }
+
+          // 1.2 Collective Killswitch: Remote Nuke frame received
+          if (plaintext.is_remote_nuke) {
+            if (nukeRoomRef.current) {
+              nukeRoomRef.current();
+            }
+            return;
+          }
 
           playReceiveSound();
 
@@ -304,6 +334,48 @@ export function useCryptoChat() {
     }
   }, [status, isHandshaking, roomId, sendFrame]);
 
+  // Background Decoy Traffic Generator (Countermeasure against traffic timing analysis)
+  useEffect(() => {
+    if (!isDecoyTrafficActive || status !== 'connected' || !roomKey || !roomId) {
+      return;
+    }
+
+    let timeoutId: number | null = null;
+    let active = true;
+
+    const scheduleNextDecoy = () => {
+      // Random delay between 15 and 28 seconds (2 to 4 frames/min)
+      const delay = Math.floor(15000 + Math.random() * 13000);
+      timeoutId = window.setTimeout(async () => {
+        if (!active || !roomKeyRef.current || !roomId) return;
+        try {
+          const decoyPayload: DecryptedMessagePlaintext = {
+            id: `decoy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            sender_name: '',
+            color: '',
+            text: '',
+            timestamp: Date.now(),
+            is_decoy: true,
+          };
+          const envelope = await encryptJson(roomKeyRef.current, decoyPayload, roomId);
+          sendFrame({
+            type: 'e2ee_message',
+            room_id: roomId,
+            payload: envelope,
+          });
+        } catch {}
+        if (active) scheduleNextDecoy();
+      }, delay);
+    };
+
+    scheduleNextDecoy();
+
+    return () => {
+      active = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [isDecoyTrafficActive, status, roomKey, roomId, sendFrame]);
+
   // Action: Send Text Message
   const sendMessage = useCallback(
     async (text: string, burnTtl?: number) => {
@@ -391,11 +463,12 @@ export function useCryptoChat() {
     [roomId, sendFrame]
   );
 
-  // Action: Send Encrypted Audio Note
+  // Action: Send Encrypted Audio Note (with biometric DSP scrambler profile)
   const sendEncryptedAudio = useCallback(
-    async (blob: Blob, durationSec: number) => {
+    async (blob: Blob, durationSec: number, effect?: VoiceEffect) => {
       if (!roomKey || !roomId) return;
 
+      const anonymousAudioName = generateAnonymousFilename('voice-note.webm', blob.type || 'audio/webm');
       const arrayBuffer = await blob.arrayBuffer();
       const uint8 = new Uint8Array(arrayBuffer);
 
@@ -429,15 +502,17 @@ export function useCryptoChat() {
         id: `audio-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         sender_name: identity.name,
         color: identity.color,
-        text: '🎤 Nota de voz cifrada',
+        text: `🎤 Nota de voz (${effect || 'natural'})`,
         timestamp: Date.now(),
         is_audio: true,
         audio_duration: durationSec,
+        voice_effect: effect || 'natural',
         file: {
           file_id: fileId,
-          file_name: 'voice-note.webm',
+          file_name: anonymousAudioName,
           file_size: blob.size,
           mime_type: blob.type || 'audio/webm',
+          is_metadata_scrubbed: true,
         },
       };
 
@@ -462,7 +537,7 @@ export function useCryptoChat() {
     [roomKey, roomId, identity, sendFrame]
   );
 
-  // Action: Upload & Send Encrypted File
+  // Action: Upload & Send Encrypted File (with EXIF stripping and filename anonymization)
   const sendEncryptedFile = useCallback(
     async (file: File) => {
       if (!roomKey || !roomId) return;
@@ -471,14 +546,20 @@ export function useCryptoChat() {
         throw new Error('El archivo supera el límite máximo de 15 MB.');
       }
 
-      // 1. Read file bytes locally
-      const arrayBuffer = await file.arrayBuffer();
+      // 1. Scrub EXIF/metadata from image in-memory canvas
+      const { blob: sanitizedBlob, mimeType: sanitizedMime } = await stripImageMetadata(file);
+
+      // 2. Discard original filename and generate an anonymous descriptor
+      const anonymousFileName = generateAnonymousFilename(file.name, sanitizedMime);
+
+      // 3. Read clean bytes locally
+      const arrayBuffer = await sanitizedBlob.arrayBuffer();
       const uint8 = new Uint8Array(arrayBuffer);
 
-      // 2. Encrypt locally in memory with AES-256-GCM
+      // 4. Encrypt locally in memory with AES-256-GCM + padding
       const envelope = await encryptBytes(roomKey, uint8, roomId);
 
-      // 3. Prepare opaque payload for streaming upload
+      // 5. Stream opaque binary to relay
       const opaqueBlob = new Blob(
         [
           JSON.stringify({
@@ -490,7 +571,6 @@ export function useCryptoChat() {
         { type: 'application/octet-stream' }
       );
 
-      // 4. Stream to backend relay
       const uploadRes = await fetch(`${API_BASE_URL}/api/files/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/octet-stream' },
@@ -504,18 +584,19 @@ export function useCryptoChat() {
       const uploadData = await uploadRes.json();
       const fileId = uploadData.file_id;
 
-      // 5. Send announcement via E2EE message
+      // 6. Send announcement via E2EE message
       const plaintext: DecryptedMessagePlaintext = {
         id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         sender_name: identity.name,
         color: identity.color,
-        text: `📎 Archivo compartido: ${file.name}`,
+        text: `📎 Archivo seguro: ${anonymousFileName}`,
         timestamp: Date.now(),
         file: {
           file_id: fileId,
-          file_name: file.name,
-          file_size: file.size,
-          mime_type: file.type || 'application/octet-stream',
+          file_name: anonymousFileName,
+          file_size: sanitizedBlob.size,
+          mime_type: sanitizedMime,
+          is_metadata_scrubbed: true,
         },
       };
 
@@ -527,8 +608,7 @@ export function useCryptoChat() {
       });
 
       playSendSound();
-      // Show locally with immediate object URL
-      const localUrl = URL.createObjectURL(file);
+      const localUrl = URL.createObjectURL(sanitizedBlob);
       setMessages((prev) => [
         ...prev,
         {
@@ -624,8 +704,15 @@ export function useCryptoChat() {
     }
   }, [participantCount, fingerprint, isSasVerified]);
 
-  // Action: Leave Room
+  // Action: Leave Room (with anti-forensics sanitization)
   const leaveRoom = useCallback(() => {
+    try {
+      performance.clearResourceTimings?.();
+      performance.clearMarks?.();
+      performance.clearMeasures?.();
+      sessionStorage.clear();
+    } catch {}
+
     setMessages((prev) => {
       prev.forEach((msg) => {
         if (msg.file_blob_url) URL.revokeObjectURL(msg.file_blob_url);
@@ -649,9 +736,16 @@ export function useCryptoChat() {
     }
   }, [disconnect]);
 
-  // Action: Nuke Room (Panic Button - zero wipe)
+  // Action: Nuke Room (Local Panic Button - zero wipe with anti-forensics)
   const nukeRoom = useCallback(() => {
     playNukeSound();
+
+    try {
+      performance.clearResourceTimings?.();
+      performance.clearMarks?.();
+      performance.clearMeasures?.();
+      sessionStorage.clear();
+    } catch {}
 
     setMessages((prev) => {
       prev.forEach((msg) => {
@@ -682,6 +776,36 @@ export function useCryptoChat() {
     // Force replace window location to clean root
     window.location.replace(window.location.origin + window.location.pathname);
   }, [disconnect]);
+
+  useEffect(() => {
+    nukeRoomRef.current = nukeRoom;
+  }, [nukeRoom]);
+
+  // Action: Collective Kill Switch (Remote Nuke for All Peers)
+  const remoteNukeRoom = useCallback(async () => {
+    const currentKey = roomKeyRef.current;
+    if (currentKey && roomId) {
+      try {
+        const payload: DecryptedMessagePlaintext = {
+          id: `remote-nuke-${Date.now()}`,
+          sender_name: 'Sistema',
+          color: '#EF4444',
+          text: '💣 Destrucción colectiva de sala ejecutada',
+          timestamp: Date.now(),
+          is_remote_nuke: true,
+        };
+        const envelope = await encryptJson(currentKey, payload, roomId);
+        sendFrame({
+          type: 'e2ee_message',
+          room_id: roomId,
+          payload: envelope,
+        });
+      } catch (err) {
+        console.error('Failed to send remote nuke frame:', err);
+      }
+    }
+    nukeRoom();
+  }, [roomId, sendFrame, nukeRoom]);
 
   // Action: Confirm SAS match (unblocks chatting)
   const confirmSasMatch = useCallback(() => {
@@ -730,6 +854,9 @@ export function useCryptoChat() {
     purgeMessage,
     leaveRoom,
     nukeRoom,
+    remoteNukeRoom,
+    isDecoyTrafficActive,
+    toggleDecoyTraffic,
   };
 }
 

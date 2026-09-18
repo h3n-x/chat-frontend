@@ -36,6 +36,9 @@ export const App: React.FC = () => {
     purgeMessage,
     leaveRoom,
     nukeRoom,
+    remoteNukeRoom,
+    isDecoyTrafficActive,
+    toggleDecoyTraffic,
   } = useCryptoChat();
 
   // Check WebCrypto support on initial mount
@@ -104,8 +107,11 @@ export const App: React.FC = () => {
           onLoadMedia={loadAndDecryptMedia}
           onPurgeMessage={purgeMessage}
           onTyping={sendTypingSignal}
+          onToggleDecoyTraffic={toggleDecoyTraffic}
+          isDecoyTrafficActive={isDecoyTrafficActive}
           onLeave={leaveRoom}
           onNuke={nukeRoom}
+          onRemoteNuke={remoteNukeRoom}
           onConfirmSasMatch={confirmSasMatch}
           onRejectSasMatch={rejectSasMatch}
           onOpenSasModal={openSasModal}

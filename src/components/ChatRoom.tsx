@@ -12,6 +12,7 @@ import {
   Flame,
   Eye,
   EyeOff,
+  Radio,
 } from 'lucide-react';
 import { SecurityBadge } from './SecurityBadge';
 import { SasVerificationModal } from './SasVerificationModal';
@@ -20,7 +21,9 @@ import { MessageInput } from './MessageInput';
 import { QrCodeModal } from './QrCodeModal';
 import { ImageLightboxModal } from './ImageLightboxModal';
 import { PanicOverlay } from './PanicOverlay';
+import { NukeModal } from './NukeModal';
 import { isSoundMuted, toggleSoundMuted } from '../utils/audio';
+import { VoiceEffect } from '../utils/voiceScrambler';
 import { ChatMessage, ConnectionStatus } from '../types';
 
 interface ChatRoomProps {
@@ -34,17 +37,20 @@ interface ChatRoomProps {
   isSasVerified: boolean;
   isSasModalOpen: boolean;
   isPeerTyping: boolean;
+  isDecoyTrafficActive: boolean;
   identity: { name: string; color: string };
   messages: ChatMessage[];
   onSendMessage: (text: string, burnTtl?: number) => Promise<void>;
   onSendFile: (file: File) => Promise<void>;
-  onSendAudio: (blob: Blob, durationSec: number) => Promise<void>;
+  onSendAudio: (blob: Blob, durationSec: number, effect?: VoiceEffect) => Promise<void>;
   onDownloadFile: (fileId: string, fileName: string, mimeType: string) => Promise<void>;
   onLoadMedia: (fileId: string, mimeType: string, messageId: string) => Promise<void>;
   onPurgeMessage: (id: string) => void;
   onTyping: (isTyping: boolean) => void;
+  onToggleDecoyTraffic: () => void;
   onLeave: () => void;
   onNuke: () => void;
+  onRemoteNuke: () => Promise<void>;
   onConfirmSasMatch: () => void;
   onRejectSasMatch: () => void;
   onOpenSasModal: () => void;
@@ -61,6 +67,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   isSasVerified,
   isSasModalOpen,
   isPeerTyping,
+  isDecoyTrafficActive,
   identity,
   messages,
   onSendMessage,
@@ -70,8 +77,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   onLoadMedia,
   onPurgeMessage,
   onTyping,
+  onToggleDecoyTraffic,
   onLeave,
   onNuke,
+  onRemoteNuke,
   onConfirmSasMatch,
   onRejectSasMatch,
   onOpenSasModal,
@@ -80,6 +89,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(isSoundMuted());
   const [isBlurred, setIsBlurred] = useState(false);
+  const [isNukeModalOpen, setIsNukeModalOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null);
 
   // Esc x 3 Panic shortcut detector
@@ -197,6 +207,14 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
         onRejectMatch={onRejectSasMatch}
       />
 
+      {/* Collective / Local Nuke Modal */}
+      <NukeModal
+        isOpen={isNukeModalOpen}
+        onClose={() => setIsNukeModalOpen(false)}
+        onLocalNuke={onNuke}
+        onRemoteNuke={onRemoteNuke}
+      />
+
       {/* Top Header */}
       <header className="px-3 sm:px-4 py-2.5 bg-neutral-900/90 border-b border-neutral-800 backdrop-blur-md flex items-center justify-between gap-2 shrink-0">
         {/* Left: Room Badge and Identity */}
@@ -257,6 +275,25 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
             <span className="hidden md:inline">Espía</span>
           </button>
 
+          {/* Decoy Traffic / Camouflage Toggle */}
+          <button
+            onClick={onToggleDecoyTraffic}
+            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all flex items-center gap-1 text-xs font-semibold ${
+              isDecoyTrafficActive
+                ? 'bg-amber-950/80 border-amber-500/70 text-amber-400 shadow-sm'
+                : 'bg-neutral-800 hover:bg-neutral-750 border-transparent text-neutral-400 hover:text-white'
+            }`}
+            title={
+              isDecoyTrafficActive
+                ? 'Camuflaje de Tráfico ACTIVO: Generando paquetes señuelo cifrados periódicos para ofuscar pautas de tráfico'
+                : 'Activar Camuflaje de Tráfico (envía tramas cifradas señuelo periódicas para derrotar análisis de tráfico)'
+            }
+            aria-label="Alternar camuflaje de tráfico señuelo"
+          >
+            <Radio className={`w-4 h-4 ${isDecoyTrafficActive ? 'animate-pulse text-amber-400' : 'text-neutral-400'}`} />
+            <span className="hidden md:inline">Camuflaje</span>
+          </button>
+
           {/* Sound Synthesizer Mute Toggle */}
           <button
             onClick={handleToggleSound}
@@ -295,9 +332,9 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
 
           {/* Panic / Nuke Button */}
           <button
-            onClick={onNuke}
+            onClick={() => setIsNukeModalOpen(true)}
             className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-800/80 text-red-300 hover:text-red-100 text-xs font-semibold transition-all shadow-sm group"
-            title="Botón de Pánico: Destruir sala, cerrar conexión y limpiar RAM inmediatamente (o presiona Esc x 3)"
+            title="Botón de Pánico: Opciones de autodestrucción local o colectiva (o presiona Esc x 3 para nuke local)"
             aria-label="Pánico: Destruir sala"
           >
             <Flame className="w-3.5 h-3.5 text-red-400 group-hover:animate-bounce" />

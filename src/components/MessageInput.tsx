@@ -2,11 +2,12 @@ import React, { useState, useRef } from 'react';
 import { Send, Paperclip, Loader2, AlertCircle, Mic, Flame } from 'lucide-react';
 import { MAX_MESSAGE_LENGTH, MAX_FILE_SIZE_BYTES } from '../config';
 import { VoiceRecorder } from './VoiceRecorder';
+import { VoiceEffect } from '../utils/voiceScrambler';
 
 interface MessageInputProps {
   onSendMessage: (text: string, burnTtl?: number) => Promise<void>;
   onSendFile: (file: File) => Promise<void>;
-  onSendAudio: (blob: Blob, durationSec: number) => Promise<void>;
+  onSendAudio: (blob: Blob, durationSec: number, effect?: VoiceEffect) => Promise<void>;
   onTyping: (isTyping: boolean) => void;
   disabled: boolean;
 }
@@ -112,10 +113,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
       {isRecordingAudio ? (
         <VoiceRecorder
-          onSendAudio={async (blob, duration) => {
+          onSendAudio={async (blob, duration, effect) => {
             try {
               setInputError(null);
-              await onSendAudio(blob, duration);
+              await onSendAudio(blob, duration, effect);
               setIsRecordingAudio(false);
             } catch (err: unknown) {
               const msg = err instanceof Error ? err.message : 'Error al enviar nota de voz';

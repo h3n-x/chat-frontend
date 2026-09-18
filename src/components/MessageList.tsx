@@ -154,18 +154,27 @@ export const MessageList: React.FC<MessageListProps> = ({
                 {/* In-Memory Audio Voice Player */}
                 {isAudio && (
                   <div className="mt-2 pt-1 border-t border-neutral-800/60">
-                    {msg.audio_blob_url ? (
-                      <div className="flex flex-col gap-1.5 py-1">
-                        <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
-                          <Volume2 className="w-4 h-4 shrink-0" />
-                          <span>Nota de voz cifrada {msg.audio_duration ? `(${msg.audio_duration}s)` : ''}</span>
-                        </div>
-                        <audio
-                          controls
-                          src={msg.audio_blob_url}
-                          className="w-full h-8 rounded-lg outline-none max-w-xs"
-                        />
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                        <Volume2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>Nota de voz {msg.audio_duration ? `(${msg.audio_duration}s)` : ''}</span>
                       </div>
+                      {msg.voice_effect && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-neutral-800/90 text-[10px] text-emerald-400 font-mono border border-neutral-700/60">
+                          {msg.voice_effect === 'deep' && '👤 Grave'}
+                          {msg.voice_effect === 'robot' && '🤖 Robot'}
+                          {msg.voice_effect === 'radio' && '📻 Radio'}
+                          {msg.voice_effect === 'natural' && '🎭 Natural'}
+                        </span>
+                      )}
+                    </div>
+
+                    {msg.audio_blob_url ? (
+                      <audio
+                        controls
+                        src={msg.audio_blob_url}
+                        className="w-full h-8 rounded-lg outline-none max-w-xs mt-1"
+                      />
                     ) : (
                       <button
                         onClick={() =>
@@ -237,6 +246,14 @@ export const MessageList: React.FC<MessageListProps> = ({
                     mimeType={msg.file.mime_type}
                     onDownload={onDownloadFile}
                   />
+                )}
+
+                {/* Metadata scrubbed security notice */}
+                {msg.file && (
+                  <div className="flex items-center gap-1 text-[10px] text-neutral-400 font-mono mt-1.5 pt-1 border-t border-neutral-800/40">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
+                    <span>Metadatos EXIF eliminados · Nombre anónimo</span>
+                  </div>
                 )}
               </div>
 

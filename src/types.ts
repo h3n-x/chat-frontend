@@ -13,11 +13,15 @@ export interface DecryptedMessagePlaintext {
   burn_ttl?: number; // TTL in seconds (e.g. 15, 30, 60, 300)
   is_audio?: boolean;
   audio_duration?: number;
+  voice_effect?: 'natural' | 'robot' | 'radio' | 'deep';
+  is_decoy?: boolean; // Chaffing traffic frame to neutralize timing analysis
+  is_remote_nuke?: boolean; // Collective killswitch signal
   file?: {
     file_id: string;
     file_name: string;
     file_size: number;
     mime_type: string;
+    is_metadata_scrubbed?: boolean;
   };
 }
 
