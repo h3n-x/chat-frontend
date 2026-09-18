@@ -10,7 +10,7 @@
 
 **Aplicación web cliente (SPA) con cifrado de extremo a extremo real ejecutado en el navegador, cero persistencia y diseño accesible WCAG 2.2 AA.**
 
-[🏠 Repositorio Umbrella](https://github.com/h3n-x/chat-anonimo) • [🚀 Backend Blind Relay](https://github.com/h3n-x/chat-backend) • [🌐 Demo en Vivo](https://write-ghost.netlify.app)
+[🏠 Repositorio Umbrella](https://github.com/h3n-x/chat-anonimo) • [🚀 Backend Blind Relay](https://github.com/h3n-x/chat-backend) • [🌐 Demo en Vivo](https://chat-zk.netlify.app)
 
 </div>
 
@@ -45,7 +45,7 @@ El cliente de Chat Anónimo v2.0 fue reescrito desde cero para erradicar las vul
 - El anfitrión crea la sala y genera la `RoomKey` localmente.
 - Se genera un enlace que incluye la clave simétrica en el **Hash Fragment** de la URL:
   ```text
-  https://write-ghost.netlify.app/#room=K7M9P2&key=base64_256bit_key
+  https://chat-zk.netlify.app/#room=K7M9P2&key=base64_256bit_key
   ```
 - **Privacidad RFC 3986:** Por especificación del protocolo HTTP, los fragmentos después de `#` **jamás se envían al servidor** en las peticiones HTTP ni en cabeceras `Referer`. El servidor nunca tiene visibilidad de la clave.
 
